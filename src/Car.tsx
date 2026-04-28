@@ -17,7 +17,7 @@ interface CarProps {
   onDebugSpeed: (speed: number) => void
 }
 
-const carMass = 1200 as number
+const carMass = 1000 as number
 
 export function Car({ thirdPerson, isRecording, onSaveReady, onDebugSpeed }: CarProps) {
   const { scene } = useGLTF("/models/car.glb")
@@ -98,9 +98,9 @@ export function Car({ thirdPerson, isRecording, onSaveReady, onDebugSpeed }: Car
         <WheelDebug radius={wheelRadius} wheelRef={wheels[3]} />
       </group>
       <group ref={visualRef}>
-        <group position={[7.3, -0.9, 1.4]} rotation={[0, Math.PI, 0]}>
-          <primitive object={scene} scale={0.02} />
-        </group>
+        {/* <group position={[7.3, -0.9, 1.4]} rotation={[0, Math.PI, 0]}> */}
+        {/*   <primitive object={scene} scale={0.02} /> */}
+        {/* </group> */}
       </group>
     </>
   )

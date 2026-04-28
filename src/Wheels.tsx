@@ -38,14 +38,14 @@ export const useWheels = (
     radius,
     directionLocal: [0, -1, 0],
     axleLocal: [1, 0, 0],
-    suspensionStiffness: 55,
-    suspensionRestLength: 0.1,
+    suspensionStiffness: 45,
+    suspensionRestLength: 0.2,
     frictionSlip: 0,
-    dampingRelaxation: 1.7,
+    dampingRelaxation: 2.7,
     dampingCompression: 4.4,
     maxSuspensionForce: 100000,
     rollInfluence: 0.01,
-    maxSuspensionTravel: 0.1,
+    maxSuspensionTravel: 0.2,
     customSlidingRotationalSpeed: -30,
     useCustomSlidingRotationalSpeed: false,
   };
@@ -60,23 +60,23 @@ export const useWheels = (
     {
       ...wheelInfo,
       chassisConnectionPointLocal: [-wheelWidthOffset, wheelHeightOffset, wheelFOffset],
-      frictionSlip: 4.5,
+      frictionSlip: 5.5,
     },
     {
       ...wheelInfo,
       chassisConnectionPointLocal: [wheelWidthOffset, wheelHeightOffset, wheelFOffset],
-      frictionSlip: 4.5,
+      frictionSlip: 5.5,
     },
     // front wheels
     {
       ...wheelInfo,
       chassisConnectionPointLocal: [-wheelWidthOffset * 1.05, wheelHeightOffset, wheelROffset],
-      frictionSlip: 5.5,
+      frictionSlip: 6.5,
     },
     {
       ...wheelInfo,
       chassisConnectionPointLocal: [wheelWidthOffset * 1.05, wheelHeightOffset, wheelROffset],
-      frictionSlip: 5.5,
+      frictionSlip: 6.5,
     },
   ];
 
