@@ -7,6 +7,7 @@ export function useAISocket() {
   const ws = useRef<WebSocket | null>(null)
   const commands = useRef<Set<AICommand>>(new Set())
   const connected = useRef(false)
+  const lastReceivedAt = useRef<number>(0)
 
   useEffect(() => {
     function connect() {
@@ -21,7 +22,9 @@ export function useAISocket() {
       socket.onmessage = (e) => {
         try {
           const data = JSON.parse(e.data)
+          console.log("[AI] received:", data)
           commands.current = new Set<AICommand>(data.commands ?? [])
+          lastReceivedAt.current = Date.now()
         } catch {
           // ignore malformed frames
         }
@@ -46,5 +49,5 @@ export function useAISocket() {
     }
   }
 
-  return { sendFrame, commands, connected }
+  return { sendFrame, commands, connected, lastReceivedAt }
 }
