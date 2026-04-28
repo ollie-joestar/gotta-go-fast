@@ -15,7 +15,7 @@ const MAX_STEER = 0.5;
 const MIN_STEER = 0.15;
 const STEER_SPEED_MAX = 35; // speed (m/s) at which steering reaches minimum angle
 
-export const useControls = (vehicleApi: any, chassisApi: any) => {
+export const useControls = (vehicleApi: any, chassisApi: any, enabled = true) => {
   const controls = useRef({
     forward: false,
     backward: false,
@@ -76,6 +76,7 @@ export const useControls = (vehicleApi: any, chassisApi: any) => {
 
   // Physics loop — runs every frame, always has fresh velocity/quaternion
   useFrame(() => {
+    if (!enabled) return;
     const { forward, backward, left, right, reset, handbrake } = controls.current;
 
     // --- Compute forward speed along car's local axis ---

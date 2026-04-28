@@ -6,8 +6,10 @@ import type { RefObject } from "react"
 import { useWheels } from "./Wheels"
 import { WheelDebug } from "./WheelDebug"
 import { useControls } from "./Controller"
+import { useBotController } from "./BotController"
 import { useFrame } from "@react-three/fiber"
 import { useGhostRecorder } from "./GhostRecorder"
+import { CHECKPOINTS } from "./checkpoints"
 import * as THREE from "three"
 
 interface CarProps {
@@ -15,11 +17,13 @@ interface CarProps {
   isRecording: boolean
   onSaveReady: (saveFn: (lapMs: number) => void) => void
   onDebugSpeed: (speed: number) => void
+  currentCheckpoint?: number
+  isBot?: boolean
 }
 
 const carMass = 1000 as number
 
-export function Car({ thirdPerson, isRecording, onSaveReady, onDebugSpeed }: CarProps) {
+export function Car({ thirdPerson, isRecording, onSaveReady, onDebugSpeed, currentCheckpoint = 0, isBot = false }: CarProps) {
   const { scene } = useGLTF("/models/car.glb")
   const size: [number, number, number] = [2.4, 1.3, 6]
   const position: [number, number, number] = [0, 1, 0]
@@ -55,7 +59,8 @@ export function Car({ thirdPerson, isRecording, onSaveReady, onDebugSpeed }: Car
     vehicleRef
   )
 
-  const { debugSpeed } = useControls(vehicleApi, chassisApi)
+  const { debugSpeed } = useControls(vehicleApi, chassisApi, !isBot)
+  useBotController({ vehicleApi, chassisApi, currentCheckpoint, allCheckpoints: CHECKPOINTS, enabled: isBot })
 
   useEffect(() => {
     onDebugSpeed(debugSpeed)
@@ -98,9 +103,9 @@ export function Car({ thirdPerson, isRecording, onSaveReady, onDebugSpeed }: Car
         <WheelDebug radius={wheelRadius} wheelRef={wheels[3]} />
       </group>
       <group ref={visualRef}>
-        {/* <group position={[7.3, -0.9, 1.4]} rotation={[0, Math.PI, 0]}> */}
-        {/*   <primitive object={scene} scale={0.02} /> */}
-        {/* </group> */}
+        <group position={[7.3, -0.9, 1.4]} rotation={[0, Math.PI, 0]}>
+          <primitive object={scene} scale={0.02} />
+        </group>
       </group>
     </>
   )

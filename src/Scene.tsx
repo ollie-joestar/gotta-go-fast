@@ -4,6 +4,8 @@ import { Suspense, useState, useEffect, useRef, useCallback } from "react"
 import { Car } from "./Car"
 import { Ground } from "./Ground"
 import { Colliders } from "./Colliders"
+import { Checkpoint } from "./Checkpoint"
+import { CHECKPOINTS } from "./checkpoints"
 
 interface SceneProps {
   onDebugSpeed: (speed: number) => void
@@ -13,6 +15,7 @@ interface SceneProps {
 export function Scene({ onDebugSpeed }: SceneProps) {
   const [thirdPerson, setThirdPerson] = useState<boolean>(true)
   const [isRecording, setIsRecording] = useState<boolean>(false)
+  const [currentCheckpoint, setCurrentCheckpoint] = useState<number>(0)
   const isRecordingRef = useRef<boolean>(false)  // ← add this
   const lapStartTime = useRef<number | null>(null)
   const saveRef = useRef<((lapMs: number) => void) | null>(null)
@@ -59,11 +62,23 @@ export function Scene({ onDebugSpeed }: SceneProps) {
       {!thirdPerson && <OrbitControls />}
       <Ground />
       <Colliders onTrigger={handleTrigger} />
+      {CHECKPOINTS.map((cp, i) => (
+        <Checkpoint
+          key={i}
+          index={i}
+          position={cp.position}
+          size={cp.size}
+          color={cp.color}
+          onTrigger={(idx) => setCurrentCheckpoint((idx + 1) % CHECKPOINTS.length)}
+        />
+      ))}
       <Car
         thirdPerson={thirdPerson}
         isRecording={isRecording}
         onSaveReady={handleSaveReady}
         onDebugSpeed={onDebugSpeed}
+        currentCheckpoint={currentCheckpoint}
+        isBot={false}
       />
     </Suspense>
   )
