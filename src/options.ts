@@ -47,6 +47,12 @@ export const CAR_OPTIONS = {
   // --- Camera ---
   cameraDistance: 10,
   cameraHeight: 5,
+  cameraLookAhead: 4,      // how far ahead of the car the camera looks (m)
+  cameraLerpFactor: 0.06,  // smoothing: lower = more lag, higher = snappier
+  cameraFovBase: 40,
+  cameraFovMax: 65,
+  cameraFovSpeedMax: 50,   // speed (m/s) at which FOV reaches max
+  cameraFovLerp: 0.04,     // FOV transition smoothness
 } as const
 
 // Derived drivetrain values — computed once from CAR_OPTIONS

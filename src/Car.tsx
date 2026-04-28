@@ -31,10 +31,13 @@ export function Car({ thirdPerson, isRecording, onSaveReady, onDebugSpeed, curre
 
   const chassisRef = useRef<THREE.Mesh | null>(null)
   const visualRef = useRef<THREE.Group | null>(null)
+  const smoothCamPos = useRef(new THREE.Vector3(0, CAR_OPTIONS.cameraHeight, CAR_OPTIONS.cameraDistance))
+  const velocityRef = useRef<[number, number, number]>([0, 0, 0])
+  const chassisPosRef = useRef<[number, number, number]>([0, 1, 0])
+  const chassisQuatRef = useRef<[number, number, number, number]>([0, 0, 0, 1])
 
   const { tick, save } = useGhostRecorder(chassisRef, isRecording)
 
-  // expose save to Scene via callback so Scene can call it on lap finish
   useEffect(() => {
     onSaveReady(save)
   }, [save, onSaveReady])
@@ -43,6 +46,13 @@ export function Car({ thirdPerson, isRecording, onSaveReady, onDebugSpeed, curre
     () => ({ args: chassisBodyArgs, mass: CAR_OPTIONS.mass, position }),
     chassisRef
   )
+
+  useEffect(() => {
+    const unsubVel = chassisApi.velocity.subscribe((v: [number, number, number]) => { velocityRef.current = v })
+    const unsubPos = chassisApi.position.subscribe((p: [number, number, number]) => { chassisPosRef.current = p })
+    const unsubQuat = chassisApi.quaternion.subscribe((q: [number, number, number, number]) => { chassisQuatRef.current = q })
+    return () => { unsubVel(); unsubPos(); unsubQuat() }
+  }, [chassisApi])
 
   const [wheels, wheelInfos] = useWheels(
     size[0], size[1], size[2] / 2 - wheelRadius, wheelRadius
@@ -65,7 +75,7 @@ export function Car({ thirdPerson, isRecording, onSaveReady, onDebugSpeed, curre
     onDebugSpeed(debugSpeed)
   }, [debugSpeed, onDebugSpeed])
 
-  useFrame((state) => {
+  useFrame((state, delta) => {
     if (!chassisBody.current) return
 
     if (visualRef.current) {
@@ -76,18 +86,31 @@ export function Car({ thirdPerson, isRecording, onSaveReady, onDebugSpeed, curre
     tick(state.clock.getElapsedTime() * 1000)
 
     if (!thirdPerson) return
-    const pos = new THREE.Vector3()
-    pos.setFromMatrixPosition(chassisBody.current.matrixWorld)
-    const quaternion = new THREE.Quaternion()
-    quaternion.setFromRotationMatrix(chassisBody.current.matrixWorld)
-    const wDir = new THREE.Vector3(0, 0, -1)
-    wDir.applyQuaternion(quaternion)
-    wDir.normalize()
-    const camPos = pos.clone().add(
-      wDir.clone().multiplyScalar(-CAR_OPTIONS.cameraDistance).add(new THREE.Vector3(0, CAR_OPTIONS.cameraHeight, 0))
-    )
-    state.camera.position.copy(camPos)
-    state.camera.lookAt(pos)
+
+    // Use physics-subscribed refs instead of matrixWorld to avoid stale reads between physics ticks
+    const [px, py, pz] = chassisPosRef.current
+    const [qx, qy, qz, qw] = chassisQuatRef.current
+    const pos = new THREE.Vector3(px, py, pz)
+    const quat = new THREE.Quaternion(qx, qy, qz, qw)
+    const wDir = new THREE.Vector3(0, 0, -1).applyQuaternion(quat).normalize()
+
+    const idealPos = pos.clone()
+      .add(wDir.clone().multiplyScalar(-CAR_OPTIONS.cameraDistance))
+      .add(new THREE.Vector3(0, CAR_OPTIONS.cameraHeight, 0))
+
+    // Frame-rate independent lerp: same visual smoothing at any refresh rate
+    const posT = 1 - Math.pow(1 - CAR_OPTIONS.cameraLerpFactor, delta * 60)
+    smoothCamPos.current.lerp(idealPos, posT)
+    state.camera.position.copy(smoothCamPos.current)
+    state.camera.lookAt(pos.clone().add(wDir.clone().multiplyScalar(CAR_OPTIONS.cameraLookAhead)))
+
+    const [vx, vy, vz] = velocityRef.current
+    const speed = Math.sqrt(vx * vx + vy * vy + vz * vz)
+    const cam = state.camera as THREE.PerspectiveCamera
+    const targetFov = THREE.MathUtils.lerp(CAR_OPTIONS.cameraFovBase, CAR_OPTIONS.cameraFovMax, Math.min(speed / CAR_OPTIONS.cameraFovSpeedMax, 1))
+    const fovT = 1 - Math.pow(1 - CAR_OPTIONS.cameraFovLerp, delta * 60)
+    cam.fov = THREE.MathUtils.lerp(cam.fov, targetFov, fovT)
+    cam.updateProjectionMatrix()
   })
 
   return (
