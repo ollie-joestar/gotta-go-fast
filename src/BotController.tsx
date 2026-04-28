@@ -28,7 +28,9 @@ export function useBotController({ vehicleApi, chassisApi, currentCheckpoint, al
   const quaternion = useRef<[number, number, number, number]>([0, 0, 0, 1])
   const position = useRef<[number, number, number]>([0, 0, 0])
 
-  const { sendFrame, commands } = useAISocket()
+  const { sendFrame, commands, lastReceivedAt } = useAISocket()
+  const lastLoggedReceivedAt = useRef<number>(0)
+  const lastLogTime = useRef<number>(0)
 
   useEffect(() => {
     const unsubVel = chassisApi.velocity.subscribe((v: [number, number, number]) => { velocity.current = v })
@@ -72,6 +74,15 @@ export function useBotController({ vehicleApi, chassisApi, currentCheckpoint, al
     const fwdY = -2 * (qy * qz - qw * qx)
     const fwdZ = -(1 - 2 * (qx * qx + qy * qy))
     const fSpeed = vx * fwdX + vy * fwdY + vz * fwdZ
+
+    const now = Date.now()
+    const newMessage = lastReceivedAt.current !== lastLoggedReceivedAt.current
+    const timeout = now - lastLogTime.current >= 5000
+    if (newMessage || timeout) {
+      console.log("Bot commands:", { forward, backward, left, right })
+      lastLoggedReceivedAt.current = lastReceivedAt.current
+      lastLogTime.current = now
+    }
 
     const isTurning = left || right
     const frontBrake = isTurning ? BRAKE_FORCE * FBRAKE_BIAS : BRAKE_FORCE
