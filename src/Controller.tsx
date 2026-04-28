@@ -2,15 +2,18 @@
 import { useEffect, useRef, useState } from "react";
 import { useFrame } from "@react-three/fiber";
 
-const FORCE = 5000 as number;
+const FORCE = 9000 as number;
 const DIFFERENTIAL = 0.5 as number;
 const FFORCE = FORCE * (1 - DIFFERENTIAL) as number;
 const RFORCE = FORCE * DIFFERENTIAL as number;
 const REV_FORCE = -FORCE * 0.5 as number;
-const BRAKE_FORCE = 70 as number;
+const BRAKE_FORCE = 85 as number;
+const FBRAKE_BIAS = 0.15 as number;
 const REVERSE_THRESHOLD = 0.4 as number;
 
-const STEER = 0.25 as number;
+const MAX_STEER = 0.5;
+const MIN_STEER = 0.15;
+const STEER_SPEED_MAX = 35; // speed (m/s) at which steering reaches minimum angle
 
 export const useControls = (vehicleApi: any, chassisApi: any) => {
   const controls = useRef({
@@ -87,51 +90,40 @@ export const useControls = (vehicleApi: any, chassisApi: any) => {
     if (Math.round(fSpeed * 10) !== Math.round(debugSpeed * 10)) {
       setDebugSpeed(fSpeed);
     }
+
+    // Brake bias: when turning, unload front wheels (2,3) so they keep lateral grip.
+    // Rears (0,1) absorb the braking load; fronts stay near-free to steer.
+    const isTurning = left || right;
+    const frontBrake = isTurning ? BRAKE_FORCE * FBRAKE_BIAS : BRAKE_FORCE;
+    const rearBrake = BRAKE_FORCE;
+
+
     // --- Drive ---
     if (forward && !handbrake) {
-      if (fSpeed < -REVERSE_THRESHOLD * 5) {
-        shouldBrake.current = true;
-      } else if (fSpeed > -0.2) {
-        shouldBrake.current = false;
-      }
-      if (shouldBrake.current) {
-        vehicleApi.setBrake(BRAKE_FORCE, 0);
-        vehicleApi.setBrake(BRAKE_FORCE, 1);
-        vehicleApi.setBrake(BRAKE_FORCE, 2);
-        vehicleApi.setBrake(BRAKE_FORCE, 3);
-        vehicleApi.applyEngineForce(0, 0);
-        vehicleApi.applyEngineForce(0, 1);
-        vehicleApi.applyEngineForce(0, 2);
-        vehicleApi.applyEngineForce(0, 3);
-      } else {
-        vehicleApi.setBrake(0, 0);
-        vehicleApi.setBrake(0, 1);
-        vehicleApi.setBrake(0, 2);
-        vehicleApi.setBrake(0, 3);
-        vehicleApi.applyEngineForce(RFORCE, 0);
-        vehicleApi.applyEngineForce(RFORCE, 1);
-        vehicleApi.applyEngineForce(FFORCE, 2);
-        vehicleApi.applyEngineForce(FFORCE, 3);
-      }
+      vehicleApi.setBrake(0, 0);
+      vehicleApi.setBrake(0, 1);
+      vehicleApi.setBrake(0, 2);
+      vehicleApi.setBrake(0, 3);
+      vehicleApi.applyEngineForce(RFORCE, 0);
+      vehicleApi.applyEngineForce(RFORCE, 1);
+      vehicleApi.applyEngineForce(FFORCE, 2);
+      vehicleApi.applyEngineForce(FFORCE, 3);
+      // }
     } else if (backward && !handbrake) {
       if (fSpeed > REVERSE_THRESHOLD) {
         shouldBrake.current = true;
       } else if (fSpeed < 0.2) {
         shouldBrake.current = false;
       }
-      // if (shouldBrake.current && fSpeed < 0.2) {
-      //   shouldBrake.current = false;
-      // }
       if (shouldBrake.current) {
-        // Still moving forward → brake
         vehicleApi.applyEngineForce(0, 0);
         vehicleApi.applyEngineForce(0, 1);
         vehicleApi.applyEngineForce(0, 2);
         vehicleApi.applyEngineForce(0, 3);
-        vehicleApi.setBrake(BRAKE_FORCE, 0);
-        vehicleApi.setBrake(BRAKE_FORCE, 1);
-        vehicleApi.setBrake(BRAKE_FORCE, 2);
-        vehicleApi.setBrake(BRAKE_FORCE, 3);
+        vehicleApi.setBrake(rearBrake, 0);
+        vehicleApi.setBrake(rearBrake, 1);
+        vehicleApi.setBrake(frontBrake, 2);
+        vehicleApi.setBrake(frontBrake, 3);
       } else {
         // Stopped or reversing → reverse
         vehicleApi.setBrake(0, 0);
@@ -170,13 +162,14 @@ export const useControls = (vehicleApi: any, chassisApi: any) => {
       vehicleApi.applyEngineForce(0, 3);
     }
 
-    // --- Steer ---
+    // --- Steer (speed-sensitive: less angle at high speed) ---
+    const steerAngle = MAX_STEER - (MAX_STEER - MIN_STEER) * Math.min(Math.abs(fSpeed) / STEER_SPEED_MAX, 1);
     if (left) {
-      vehicleApi.setSteeringValue(STEER, 2);
-      vehicleApi.setSteeringValue(STEER, 3);
+      vehicleApi.setSteeringValue(steerAngle, 2);
+      vehicleApi.setSteeringValue(steerAngle, 3);
     } else if (right) {
-      vehicleApi.setSteeringValue(-STEER, 2);
-      vehicleApi.setSteeringValue(-STEER, 3);
+      vehicleApi.setSteeringValue(-steerAngle, 2);
+      vehicleApi.setSteeringValue(-steerAngle, 3);
     } else {
       vehicleApi.setSteeringValue(0, 0);
       vehicleApi.setSteeringValue(0, 1);

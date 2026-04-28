@@ -1,6 +1,6 @@
 // GhostRecorder.ts
 import { useEffect, useRef, useCallback } from "react"
-import type { GhostData, GhostFrame } from "./ghostTypes"
+import type { GhostData, GhostFrame } from "./DataTypes"
 import * as THREE from "three"
 
 const RECORD_HZ = 10

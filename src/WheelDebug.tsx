@@ -2,7 +2,7 @@
 import * as THREE from 'three';
 import type { RefObject } from 'react';
 
-const debug = false;
+const debug = true;
 
 interface WheelDebugProps {
   radius: number;
@@ -16,7 +16,7 @@ export const WheelDebug = ({ radius, wheelRef }: WheelDebugProps) => {
     <group ref={wheelRef}>
       <mesh rotation={[0, 0, Math.PI / 2]}>
         <cylinderGeometry args={[radius, radius, wheelWidth, 16]} />
-        <meshBasicMaterial transparent opacity={0.2} color="white" />
+        <meshBasicMaterial transparent wireframe opacity={0.2} color="white" />
       </mesh>
     </group>
   );
