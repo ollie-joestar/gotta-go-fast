@@ -13,7 +13,7 @@ export default function App() {
       <Canvas>
         <Physics
           gravity={[0, -9.81, 0]}
-          defaultContactMaterial={{ friction: 0.1, restitution: 0 }}
+          defaultContactMaterial={{ friction: 0.8, restitution: 0 }}
           broadphase="SAP"
         >
           <Scene onDebugSpeed={setDebugSpeed} />
@@ -23,13 +23,13 @@ export default function App() {
       {/* Overlay — lives outside Canvas, no drei Html needed */}
       <div style={{
         position: "absolute",
-        top: 16,
-        left: 16,
+        top: 8,
+        left: 8,
         color: "white",
         fontFamily: "monospace",
-        fontSize: 13,
+        fontSize: 12,
         background: "rgba(0,0,0,0.55)",
-        padding: "6px 10px",
+        padding: "3px 5px",
         borderRadius: 6,
         pointerEvents: "none",
       }}>
