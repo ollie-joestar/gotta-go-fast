@@ -10,6 +10,7 @@ import { useBotController } from "./BotController"
 import { useFrame } from "@react-three/fiber"
 import { useGhostRecorder } from "./GhostRecorder"
 import { CHECKPOINTS } from "./checkpoints"
+import { CAR_OPTIONS } from "./options"
 import * as THREE from "three"
 
 interface CarProps {
@@ -21,13 +22,11 @@ interface CarProps {
   isBot?: boolean
 }
 
-const carMass = 1000 as number
-
 export function Car({ thirdPerson, isRecording, onSaveReady, onDebugSpeed, currentCheckpoint = 0, isBot = false }: CarProps) {
   const { scene } = useGLTF("/models/car.glb")
-  const size: [number, number, number] = [2.4, 1.3, 6]
+  const size = CAR_OPTIONS.size
   const position: [number, number, number] = [0, 1, 0]
-  const wheelRadius = 0.43
+  const wheelRadius = CAR_OPTIONS.wheelRadius
   const chassisBodyArgs = size
 
   const chassisRef = useRef<THREE.Mesh | null>(null)
@@ -41,7 +40,7 @@ export function Car({ thirdPerson, isRecording, onSaveReady, onDebugSpeed, curre
   }, [save, onSaveReady])
 
   const [chassisBody, chassisApi] = useBox(
-    () => ({ args: chassisBodyArgs, mass: carMass, position }),
+    () => ({ args: chassisBodyArgs, mass: CAR_OPTIONS.mass, position }),
     chassisRef
   )
 
@@ -85,7 +84,7 @@ export function Car({ thirdPerson, isRecording, onSaveReady, onDebugSpeed, curre
     wDir.applyQuaternion(quaternion)
     wDir.normalize()
     const camPos = pos.clone().add(
-      wDir.clone().multiplyScalar(-10).add(new THREE.Vector3(0, 5, 0))
+      wDir.clone().multiplyScalar(-CAR_OPTIONS.cameraDistance).add(new THREE.Vector3(0, CAR_OPTIONS.cameraHeight, 0))
     )
     state.camera.position.copy(camPos)
     state.camera.lookAt(pos)
@@ -93,10 +92,8 @@ export function Car({ thirdPerson, isRecording, onSaveReady, onDebugSpeed, curre
 
   return (
     <>
-
       <group ref={vehicle}>
         <mesh ref={chassisBody} visible={true} />
-
         <WheelDebug radius={wheelRadius} wheelRef={wheels[0]} />
         <WheelDebug radius={wheelRadius} wheelRef={wheels[1]} />
         <WheelDebug radius={wheelRadius} wheelRef={wheels[2]} />

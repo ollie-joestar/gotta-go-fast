@@ -3,17 +3,13 @@ import { useFrame } from "@react-three/fiber"
 import { useAISocket } from "./useAISocket"
 import type { AIFrame, Checkpoints } from "./aiTypes"
 import type { CheckpointDef } from "./checkpoints"
+import { CAR_OPTIONS, FFORCE, RFORCE } from "./options"
 
-// Mirrors the constants in Controller.tsx so both cars behave identically.
-const FORCE = 9000
-const DIFFERENTIAL = 0.5
-const FFORCE = FORCE * (1 - DIFFERENTIAL)
-const RFORCE = FORCE * DIFFERENTIAL
-const BRAKE_FORCE = 85
-const FBRAKE_BIAS = 0.15
-const MAX_STEER = 0.5
-const MIN_STEER = 0.15
-const STEER_SPEED_MAX = 35
+const BRAKE_FORCE = CAR_OPTIONS.brakeForce
+const FBRAKE_BIAS = CAR_OPTIONS.frontBrakeBias
+const MAX_STEER = CAR_OPTIONS.maxSteer
+const MIN_STEER = CAR_OPTIONS.minSteer
+const STEER_SPEED_MAX = CAR_OPTIONS.steerSpeedMax
 
 const CONSOLE_LOG_INTERVAL = 10000  // ms
 

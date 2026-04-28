@@ -78,7 +78,7 @@ export function Scene({ onDebugSpeed }: SceneProps) {
         onSaveReady={handleSaveReady}
         onDebugSpeed={onDebugSpeed}
         currentCheckpoint={currentCheckpoint}
-        isBot={true}
+        isBot={false}
       />
     </Suspense>
   )

@@ -1,19 +1,14 @@
 // Controller.tsx
 import { useEffect, useRef, useState } from "react";
 import { useFrame } from "@react-three/fiber";
+import { CAR_OPTIONS, FFORCE, RFORCE, REV_FORCE } from "./options";
 
-const FORCE = 9000 as number;
-const DIFFERENTIAL = 0.5 as number;
-const FFORCE = FORCE * (1 - DIFFERENTIAL) as number;
-const RFORCE = FORCE * DIFFERENTIAL as number;
-const REV_FORCE = -FORCE * 0.5 as number;
-const BRAKE_FORCE = 85 as number;
-const FBRAKE_BIAS = 0.15 as number;
-const REVERSE_THRESHOLD = 0.4 as number;
-
-const MAX_STEER = 0.5;
-const MIN_STEER = 0.15;
-const STEER_SPEED_MAX = 35; // speed (m/s) at which steering reaches minimum angle
+const BRAKE_FORCE = CAR_OPTIONS.brakeForce;
+const FBRAKE_BIAS = CAR_OPTIONS.frontBrakeBias;
+const REVERSE_THRESHOLD = CAR_OPTIONS.reverseThreshold;
+const MAX_STEER = CAR_OPTIONS.maxSteer;
+const MIN_STEER = CAR_OPTIONS.minSteer;
+const STEER_SPEED_MAX = CAR_OPTIONS.steerSpeedMax;
 
 export const useControls = (vehicleApi: any, chassisApi: any, enabled = true) => {
   const controls = useRef({
