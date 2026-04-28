@@ -36,7 +36,10 @@ export function useAISocket() {
         setTimeout(connect, 2000)
       }
 
-      socket.onerror = () => socket.close()
+      socket.onerror = () => {
+        console.log("[AI] connection error — closing socket and retrying in 2s")
+        socket.close()
+      }
     }
 
     connect()

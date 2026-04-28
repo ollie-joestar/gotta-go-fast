@@ -15,6 +15,8 @@ const MAX_STEER = 0.5
 const MIN_STEER = 0.15
 const STEER_SPEED_MAX = 35
 
+const CONSOLE_LOG_INTERVAL = 10000  // ms
+
 interface BotControllerOptions {
   vehicleApi: any
   chassisApi: any
@@ -77,7 +79,7 @@ export function useBotController({ vehicleApi, chassisApi, currentCheckpoint, al
 
     const now = Date.now()
     const newMessage = lastReceivedAt.current !== lastLoggedReceivedAt.current
-    const timeout = now - lastLogTime.current >= 5000
+    const timeout = now - lastLogTime.current >= CONSOLE_LOG_INTERVAL
     if (newMessage || timeout) {
       console.log("Bot commands:", { forward, backward, left, right })
       lastLoggedReceivedAt.current = lastReceivedAt.current
