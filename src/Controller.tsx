@@ -167,6 +167,7 @@ export const useControls = (vehicleApi: any, chassisApi: any, enabled = true) =>
 
     // --- Steer (speed-sensitive: less angle at high speed) ---
     const steerAngle = MAX_STEER - (MAX_STEER - MIN_STEER) * Math.min(Math.abs(fSpeed) / STEER_SPEED_MAX, 1);
+
     if (left) {
       vehicleApi.setSteeringValue(steerAngle, 2);
       vehicleApi.setSteeringValue(steerAngle, 3);

@@ -13,7 +13,7 @@ export default function App() {
       <Canvas frameloop="demand">
         <Physics
           gravity={[0, -9.81, 0]}
-          defaultContactMaterial={{ friction: 0.8, restitution: 0 }}
+          defaultContactMaterial={{ friction: 1.0, restitution: 0 }}
           broadphase="SAP"
         >
           <Scene onDebugSpeed={setDebugSpeed} />
