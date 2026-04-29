@@ -1,7 +1,7 @@
 // Car.tsx — receives isRecording and exposes save via callback
 import { useBox, useRaycastVehicle } from "@react-three/cannon"
 import { useGLTF } from "@react-three/drei"
-import { useRef, useEffect } from "react"
+import React, { useRef, useEffect } from "react"
 import type { RefObject } from "react"
 import { useWheels } from "./Wheels"
 import { WheelDebug } from "./WheelDebug"
@@ -31,7 +31,35 @@ export function Car({ thirdPerson, isRecording, onSaveReady, onDebugSpeed, curre
 
   const chassisRef = useRef<THREE.Mesh | null>(null)
   const visualRef = useRef<THREE.Group | null>(null)
+
+  // Smoothed body position/quaternion — lerped each frame toward physics subscription
+  const smoothBodyPos = useRef(new THREE.Vector3(0, 1, 0))
+  const smoothBodyQuat = useRef(new THREE.Quaternion())
+
+  // Visual wheel refs — rendered at scene root, positioned via subscribed world positions
+  const visualWheelRefs = [
+    useRef<THREE.Object3D | null>(null),
+    useRef<THREE.Object3D | null>(null),
+    useRef<THREE.Object3D | null>(null),
+    useRef<THREE.Object3D | null>(null),
+  ]
+
+  // Subscribed wheel world positions — same reliable mechanism as chassis
+  const wheelPosRefs = [
+    useRef<[number, number, number]>([0, 0, 0]),
+    useRef<[number, number, number]>([0, 0, 0]),
+    useRef<[number, number, number]>([0, 0, 0]),
+    useRef<[number, number, number]>([0, 0, 0]),
+  ]
+  const wheelQuatRefs = [
+    useRef<[number, number, number, number]>([0, 0, 0, 1]),
+    useRef<[number, number, number, number]>([0, 0, 0, 1]),
+    useRef<[number, number, number, number]>([0, 0, 0, 1]),
+    useRef<[number, number, number, number]>([0, 0, 0, 1]),
+  ]
+
   const smoothCamPos = useRef(new THREE.Vector3(0, CAR_OPTIONS.cameraHeight, CAR_OPTIONS.cameraDistance))
+  const smoothLookAt = useRef(new THREE.Vector3(0, 0, 0))
   const velocityRef = useRef<[number, number, number]>([0, 0, 0])
   const chassisPosRef = useRef<[number, number, number]>([0, 1, 0])
   const chassisQuatRef = useRef<[number, number, number, number]>([0, 0, 0, 1])
@@ -54,9 +82,21 @@ export function Car({ thirdPerson, isRecording, onSaveReady, onDebugSpeed, curre
     return () => { unsubVel(); unsubPos(); unsubQuat() }
   }, [chassisApi])
 
-  const [wheels, wheelInfos] = useWheels(
+  const [wheels, wheelInfos, wheelApis] = useWheels(
     size[0], size[1], size[2] / 2 - wheelRadius, wheelRadius
   )
+
+  // Subscribe to wheel world positions — the only reliable way to read them from cannon
+
+  useEffect(() => {
+    const unsubs: (() => void)[] = []
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    wheelApis.forEach((api: any, i: number) => {
+      unsubs.push(api.position.subscribe((p: [number, number, number]) => { wheelPosRefs[i].current = p }))
+      unsubs.push(api.quaternion.subscribe((q: [number, number, number, number]) => { wheelQuatRefs[i].current = q }))
+    })
+    return () => unsubs.forEach(u => u())
+  }, [])
 
   const vehicleRef = useRef<THREE.Object3D | null>(null)
   const [vehicle, vehicleApi] = useRaycastVehicle(
@@ -78,12 +118,30 @@ export function Car({ thirdPerson, isRecording, onSaveReady, onDebugSpeed, curre
   useFrame((state, delta) => {
     if (!chassisBody.current) return
 
+    tick(state.clock.getElapsedTime() * 1000)
+
+    // Fast lerp factor — nearly instant, just removes physics-render timing jitter
+    const visualT = 1 - Math.pow(1 - CAR_OPTIONS.visualLerpFactor, delta * 60)
+
+    // Smooth car body visual toward subscribed chassis world position
     if (visualRef.current) {
-      visualRef.current.position.setFromMatrixPosition(chassisBody.current.matrixWorld)
-      visualRef.current.quaternion.setFromRotationMatrix(chassisBody.current.matrixWorld)
+      const [px, py, pz] = chassisPosRef.current
+      const [qx, qy, qz, qw] = chassisQuatRef.current
+      smoothBodyPos.current.lerp(_tv.set(px, py, pz), visualT)
+      smoothBodyQuat.current.slerp(_tq.set(qx, qy, qz, qw), visualT)
+      visualRef.current.position.copy(smoothBodyPos.current)
+      visualRef.current.quaternion.copy(smoothBodyQuat.current)
     }
 
-    tick(state.clock.getElapsedTime() * 1000)
+    // Smooth visual wheels toward subscribed wheel world positions
+    // WheelDebug is at scene root so local position = world position — no coordinate space mismatch
+    for (let i = 0; i < 4; i++) {
+      const vis = visualWheelRefs[i].current
+      if (vis) {
+        vis.position.lerp(_tv.set(...wheelPosRefs[i].current), visualT)
+        vis.quaternion.slerp(_tq.set(...wheelQuatRefs[i].current), visualT)
+      }
+    }
 
     if (!thirdPerson) return
 
@@ -102,7 +160,12 @@ export function Car({ thirdPerson, isRecording, onSaveReady, onDebugSpeed, curre
     const posT = 1 - Math.pow(1 - CAR_OPTIONS.cameraLerpFactor, delta * 60)
     smoothCamPos.current.lerp(idealPos, posT)
     state.camera.position.copy(smoothCamPos.current)
-    state.camera.lookAt(pos.clone().add(wDir.clone().multiplyScalar(CAR_OPTIONS.cameraLookAhead)))
+
+    // Smooth the lookAt target at the same rate — without this the aim snaps at the
+    // physics tick rate while the position is smooth, causing a "double image" ghost
+    const idealLookAt = pos.clone().add(wDir.clone().multiplyScalar(CAR_OPTIONS.cameraLookAhead))
+    smoothLookAt.current.lerp(idealLookAt, posT)
+    state.camera.lookAt(smoothLookAt.current)
 
     const [vx, vy, vz] = velocityRef.current
     const speed = Math.sqrt(vx * vx + vy * vy + vz * vz)
@@ -115,20 +178,33 @@ export function Car({ thirdPerson, isRecording, onSaveReady, onDebugSpeed, curre
 
   return (
     <>
+      {/* Physics bodies — cannon needs mounted refs; nothing here is rendered */}
       <group ref={vehicle}>
-        <mesh ref={chassisBody} visible={true} />
-        <WheelDebug radius={wheelRadius} wheelRef={wheels[0]} />
-        <WheelDebug radius={wheelRadius} wheelRef={wheels[1]} />
-        <WheelDebug radius={wheelRadius} wheelRef={wheels[2]} />
-        <WheelDebug radius={wheelRadius} wheelRef={wheels[3]} />
+        <mesh ref={chassisBody} visible={false} />
+        <group ref={wheels[0] as React.MutableRefObject<THREE.Group>} visible={false} />
+        <group ref={wheels[1] as React.MutableRefObject<THREE.Group>} visible={false} />
+        <group ref={wheels[2] as React.MutableRefObject<THREE.Group>} visible={false} />
+        <group ref={wheels[3] as React.MutableRefObject<THREE.Group>} visible={false} />
       </group>
+
+      {/* Visual car body — scene root, smoothed toward subscribed chassis world position */}
       <group ref={visualRef}>
         <group position={[7.3, -0.9, 1.4]} rotation={[0, Math.PI, 0]}>
           <primitive object={scene} scale={0.02} />
         </group>
       </group>
+
+      {/* Visual wheels — scene root so local position = world position; lerped via subscriptions */}
+      <WheelDebug radius={wheelRadius} wheelRef={visualWheelRefs[0]} />
+      <WheelDebug radius={wheelRadius} wheelRef={visualWheelRefs[1]} />
+      <WheelDebug radius={wheelRadius} wheelRef={visualWheelRefs[2]} />
+      <WheelDebug radius={wheelRadius} wheelRef={visualWheelRefs[3]} />
     </>
   )
 }
 
 useGLTF.preload("/models/car.glb")
+
+// Module-level scratch objects to avoid allocating per frame
+const _tv = new THREE.Vector3()
+const _tq = new THREE.Quaternion()

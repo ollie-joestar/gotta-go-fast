@@ -1,7 +1,7 @@
 import { useEffect, useRef } from "react"
 import type { AIFrame, AICommand } from "./aiTypes"
 
-const WS_URL = "ws://localhost:8765"
+const WS_URL = "ws://localhost:8765/AI"
 
 export function useAISocket() {
   const ws = useRef<WebSocket | null>(null)
@@ -23,7 +23,9 @@ export function useAISocket() {
         try {
           const data = JSON.parse(e.data)
           console.log("[AI] received:", data)
-          commands.current = new Set<AICommand>(data.commands ?? [])
+          // Testing another option for parsing commands
+          // commands.current = new Set<AICommand>(data.commands ?? [])
+          commands.current = data
           lastReceivedAt.current = Date.now()
         } catch {
           // ignore malformed frames

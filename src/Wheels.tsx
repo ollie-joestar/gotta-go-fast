@@ -22,7 +22,8 @@ interface WheelInfo {
   chassisConnectionPointLocal?: [number, number, number];
 }
 
-type UseWheelsReturn = [RefObject<Object3D | null>[], WheelInfo[]];
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+type UseWheelsReturn = [RefObject<Object3D | null>[], WheelInfo[], any[]];
 
 export const useWheels = (
   width: number,
@@ -94,10 +95,10 @@ export const useWheels = (
     type: "Kinematic" as const,
   });
 
-  useCompoundBody(propsFunc, wheel0);
-  useCompoundBody(propsFunc, wheel1);
-  useCompoundBody(propsFunc, wheel2);
-  useCompoundBody(propsFunc, wheel3);
+  const [, w0Api] = useCompoundBody(propsFunc, wheel0);
+  const [, w1Api] = useCompoundBody(propsFunc, wheel1);
+  const [, w2Api] = useCompoundBody(propsFunc, wheel2);
+  const [, w3Api] = useCompoundBody(propsFunc, wheel3);
 
-  return [[wheel0, wheel1, wheel2, wheel3], wheelInfos];
+  return [[wheel0, wheel1, wheel2, wheel3], wheelInfos, [w0Api, w1Api, w2Api, w3Api]];
 };

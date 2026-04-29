@@ -83,8 +83,9 @@ export const useControls = (vehicleApi: any, chassisApi: any, enabled = true) =>
     const forwardZ = -(1 - 2 * (qx * qx + qy * qy));
 
     const fSpeed = vx * forwardX + vy * forwardY + vz * forwardZ;
-    if (Math.round(fSpeed * 10) !== Math.round(debugSpeed * 10)) {
-      setDebugSpeed(fSpeed);
+    const displaySpeed = Math.abs(fSpeed) < 0.15 ? 0 : fSpeed;
+    if (Math.round(displaySpeed * 10) !== Math.round(debugSpeed * 10)) {
+      setDebugSpeed(displaySpeed);
     }
 
     // Brake bias: when turning, unload front wheels (2,3) so they keep lateral grip.
@@ -148,14 +149,20 @@ export const useControls = (vehicleApi: any, chassisApi: any, enabled = true) =>
         vehicleApi.applyEngineForce(0, 3);
       }
     } else {
-      vehicleApi.setBrake(0, 0);
-      vehicleApi.setBrake(0, 1);
-      vehicleApi.setBrake(0, 2);
-      vehicleApi.setBrake(0, 3);
       vehicleApi.applyEngineForce(0, 0);
       vehicleApi.applyEngineForce(0, 1);
       vehicleApi.applyEngineForce(0, 2);
       vehicleApi.applyEngineForce(0, 3);
+      const coastBrake = Math.abs(fSpeed) > 0.15 ? CAR_OPTIONS.coastBrakeForce : 0;
+      vehicleApi.setBrake(coastBrake, 0);
+      vehicleApi.setBrake(coastBrake, 1);
+      if (left || right) {
+        vehicleApi.setBrake(0, 2);
+        vehicleApi.setBrake(0, 3);
+      } else {
+        vehicleApi.setBrake(coastBrake, 2);
+        vehicleApi.setBrake(coastBrake, 3);
+      }
     }
 
     // --- Steer (speed-sensitive: less angle at high speed) ---
