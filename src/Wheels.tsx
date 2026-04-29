@@ -42,7 +42,7 @@ export const useWheels = (
     axleLocal: [1, 0, 0],
     suspensionStiffness: CAR_OPTIONS.suspensionStiffness,
     suspensionRestLength: CAR_OPTIONS.suspensionRestLength,
-    frictionSlip: 0,
+    frictionSlip: 10,
     dampingRelaxation: CAR_OPTIONS.dampingRelaxation,
     dampingCompression: CAR_OPTIONS.dampingCompression,
     maxSuspensionForce: CAR_OPTIONS.maxSuspensionForce,

@@ -10,15 +10,16 @@ export const CAR_OPTIONS = {
   force: 8001,
   differential: 0.5,       // fraction of force sent to rear (0 = FWD, 1 = RWD, 0.5 = AWD)
   revForceRatio: 0.5,      // reverse force as a fraction of total force
-  brakeForce: 80,
+  brakeForce: 100,
   coastBrakeForce: 20,     // passive deceleration applied when no throttle/brake input
-  frontBrakeBias: 0.15,    // front brake fraction when turning (reduces understeer)
+  frontBrakeBias: 0.05,    // front brake fraction when turning (reduces understeer)
   reverseThreshold: 0.4,   // forward speed (m/s) below which braking switches to reverse
 
   // --- Steering ---
-  maxSteer: 0.45,
-  minSteer: 0.1,
+  maxSteer: 0.6,          // max steering angle in radians (~35 degrees)
+  minSteer: 0.05,
   steerSpeedMax: 40,       // speed (m/s) at which steering is clamped to minSteer
+  steerStep: 0.05,        // how much to change steer angle per frame of input
 
   // --- Suspension ---
   suspensionStiffness: 45,
@@ -30,17 +31,17 @@ export const CAR_OPTIONS = {
   maxSuspensionTravel: 0.2,
 
   // --- Wheels ---
-  rearFrictionSlip: 7.5,
-  frontFrictionSlip: 8.5,
+  rearFrictionSlip: 10.0,
+  frontFrictionSlip: 10.0,
   customSlidingRotationalSpeed: -30,
   useCustomSlidingRotationalSpeed: false,
-  wheelCylinderThickness: 0.37,
+  wheelCylinderThickness: 0.42,
   wheelCylinderSegments: 16,
-  wheelMass: 1,
+  wheelMass: 100,
 
   // --- Wheel geometry factors (multiplied against chassis dimensions) ---
   wheelHeightFactor: 0.265,
-  wheelWidthFactor: 0.45,
+  wheelWidthFactor: 0.50,
   wheelFrontOffsetFactor: 0.68,
   wheelRearOffsetFactor: 0.73,
   frontWheelWidthMultiplier: 1.05,
@@ -49,7 +50,7 @@ export const CAR_OPTIONS = {
   cameraDistance: 10,
   cameraHeight: 5,
   cameraLookAhead: 4,      // how far ahead of the car the camera looks (m)
-  cameraLerpFactor: 0.06,  // smoothing: lower = more lag, higher = snappier
+  cameraLerpFactor: 0.16,  // smoothing: lower = more lag, higher = snappier
   cameraFovBase: 40,
   cameraFovMax: 65,
   cameraFovSpeedMax: 50,   // speed (m/s) at which FOV reaches max
@@ -59,7 +60,7 @@ export const CAR_OPTIONS = {
   // Fast lerp applied to car body and wheel visuals each frame.
   // Removes 1-frame timing jitter between physics worker updates and render without
   // adding any perceptible visual lag (0.85 = ~96% there within 2 frames at 60fps).
-  visualLerpFactor: 0.85,
+  visualLerpFactor: 0.2,
 } as const
 
 // Derived drivetrain values — computed once from CAR_OPTIONS
