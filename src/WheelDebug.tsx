@@ -6,7 +6,7 @@ const debug = true;
 
 interface WheelDebugProps {
   radius: number;
-  wheelRef: RefObject<THREE.Object3D> | null;
+  wheelRef: RefObject<THREE.Object3D | null>;
 }
 
 export const WheelDebug = ({ radius, wheelRef }: WheelDebugProps) => {

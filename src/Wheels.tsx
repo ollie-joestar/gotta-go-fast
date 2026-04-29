@@ -3,6 +3,7 @@ import { useCompoundBody } from "@react-three/cannon";
 import { useRef } from "react";
 import type { RefObject } from "react";
 import { Object3D } from "three";
+import { CAR_OPTIONS } from "./options";
 
 interface WheelInfo {
   radius: number;
@@ -21,7 +22,8 @@ interface WheelInfo {
   chassisConnectionPointLocal?: [number, number, number];
 }
 
-type UseWheelsReturn = [RefObject<Object3D | null>[], WheelInfo[]];
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+type UseWheelsReturn = [RefObject<Object3D | null>[], WheelInfo[], any[]];
 
 export const useWheels = (
   width: number,
@@ -38,54 +40,54 @@ export const useWheels = (
     radius,
     directionLocal: [0, -1, 0],
     axleLocal: [1, 0, 0],
-    suspensionStiffness: 45,
-    suspensionRestLength: 0.2,
+    suspensionStiffness: CAR_OPTIONS.suspensionStiffness,
+    suspensionRestLength: CAR_OPTIONS.suspensionRestLength,
     frictionSlip: 0,
-    dampingRelaxation: 2.7,
-    dampingCompression: 4.4,
-    maxSuspensionForce: 100000,
-    rollInfluence: 0.01,
-    maxSuspensionTravel: 0.2,
-    customSlidingRotationalSpeed: -30,
-    useCustomSlidingRotationalSpeed: false,
+    dampingRelaxation: CAR_OPTIONS.dampingRelaxation,
+    dampingCompression: CAR_OPTIONS.dampingCompression,
+    maxSuspensionForce: CAR_OPTIONS.maxSuspensionForce,
+    rollInfluence: CAR_OPTIONS.rollInfluence,
+    maxSuspensionTravel: CAR_OPTIONS.maxSuspensionTravel,
+    customSlidingRotationalSpeed: CAR_OPTIONS.customSlidingRotationalSpeed,
+    useCustomSlidingRotationalSpeed: CAR_OPTIONS.useCustomSlidingRotationalSpeed,
   };
 
-  const wheelHeightOffset = -height * 0.265;
-  const wheelWidthOffset = width * 0.45;
-  const wheelFOffset = front * 0.68;
-  const wheelROffset = -front * 0.73;
+  const wheelHeightOffset = -height * CAR_OPTIONS.wheelHeightFactor;
+  const wheelWidthOffset = width * CAR_OPTIONS.wheelWidthFactor;
+  const wheelFOffset = front * CAR_OPTIONS.wheelFrontOffsetFactor;
+  const wheelROffset = -front * CAR_OPTIONS.wheelRearOffsetFactor;
 
   const wheelInfos: WheelInfo[] = [
     // back wheels
     {
       ...wheelInfo,
       chassisConnectionPointLocal: [-wheelWidthOffset, wheelHeightOffset, wheelFOffset],
-      frictionSlip: 5.5,
+      frictionSlip: CAR_OPTIONS.rearFrictionSlip,
     },
     {
       ...wheelInfo,
       chassisConnectionPointLocal: [wheelWidthOffset, wheelHeightOffset, wheelFOffset],
-      frictionSlip: 5.5,
+      frictionSlip: CAR_OPTIONS.rearFrictionSlip,
     },
     // front wheels
     {
       ...wheelInfo,
-      chassisConnectionPointLocal: [-wheelWidthOffset * 1.05, wheelHeightOffset, wheelROffset],
-      frictionSlip: 6.5,
+      chassisConnectionPointLocal: [-wheelWidthOffset * CAR_OPTIONS.frontWheelWidthMultiplier, wheelHeightOffset, wheelROffset],
+      frictionSlip: CAR_OPTIONS.frontFrictionSlip,
     },
     {
       ...wheelInfo,
-      chassisConnectionPointLocal: [wheelWidthOffset * 1.05, wheelHeightOffset, wheelROffset],
-      frictionSlip: 6.5,
+      chassisConnectionPointLocal: [wheelWidthOffset * CAR_OPTIONS.frontWheelWidthMultiplier, wheelHeightOffset, wheelROffset],
+      frictionSlip: CAR_OPTIONS.frontFrictionSlip,
     },
   ];
 
   const propsFunc = () => ({
     collisionFilterGroup: 0,
-    mass: 1,
+    mass: CAR_OPTIONS.wheelMass,
     shapes: [
       {
-        args: [wheelInfo.radius, wheelInfo.radius, 0.37, 16] as [number, number, number, number],
+        args: [wheelInfo.radius, wheelInfo.radius, CAR_OPTIONS.wheelCylinderThickness, CAR_OPTIONS.wheelCylinderSegments] as [number, number, number, number],
         rotation: [0, 0, -Math.PI / 2] as [number, number, number],
         type: "Cylinder" as const,
       },
@@ -93,10 +95,10 @@ export const useWheels = (
     type: "Kinematic" as const,
   });
 
-  useCompoundBody(propsFunc, wheel0);
-  useCompoundBody(propsFunc, wheel1);
-  useCompoundBody(propsFunc, wheel2);
-  useCompoundBody(propsFunc, wheel3);
+  const [, w0Api] = useCompoundBody(propsFunc, wheel0);
+  const [, w1Api] = useCompoundBody(propsFunc, wheel1);
+  const [, w2Api] = useCompoundBody(propsFunc, wheel2);
+  const [, w3Api] = useCompoundBody(propsFunc, wheel3);
 
-  return [[wheel0, wheel1, wheel2, wheel3], wheelInfos];
+  return [[wheel0, wheel1, wheel2, wheel3], wheelInfos, [w0Api, w1Api, w2Api, w3Api]];
 };

@@ -1,19 +1,14 @@
 // Controller.tsx
 import { useEffect, useRef, useState } from "react";
 import { useFrame } from "@react-three/fiber";
+import { CAR_OPTIONS, FFORCE, RFORCE, REV_FORCE } from "./options";
 
-const FORCE = 9000 as number;
-const DIFFERENTIAL = 0.5 as number;
-const FFORCE = FORCE * (1 - DIFFERENTIAL) as number;
-const RFORCE = FORCE * DIFFERENTIAL as number;
-const REV_FORCE = -FORCE * 0.5 as number;
-const BRAKE_FORCE = 85 as number;
-const FBRAKE_BIAS = 0.15 as number;
-const REVERSE_THRESHOLD = 0.4 as number;
-
-const MAX_STEER = 0.5;
-const MIN_STEER = 0.15;
-const STEER_SPEED_MAX = 35; // speed (m/s) at which steering reaches minimum angle
+const BRAKE_FORCE = CAR_OPTIONS.brakeForce;
+const FBRAKE_BIAS = CAR_OPTIONS.frontBrakeBias;
+const REVERSE_THRESHOLD = CAR_OPTIONS.reverseThreshold;
+const MAX_STEER = CAR_OPTIONS.maxSteer;
+const MIN_STEER = CAR_OPTIONS.minSteer;
+const STEER_SPEED_MAX = CAR_OPTIONS.steerSpeedMax;
 
 export const useControls = (vehicleApi: any, chassisApi: any, enabled = true) => {
   const controls = useRef({
@@ -88,8 +83,9 @@ export const useControls = (vehicleApi: any, chassisApi: any, enabled = true) =>
     const forwardZ = -(1 - 2 * (qx * qx + qy * qy));
 
     const fSpeed = vx * forwardX + vy * forwardY + vz * forwardZ;
-    if (Math.round(fSpeed * 10) !== Math.round(debugSpeed * 10)) {
-      setDebugSpeed(fSpeed);
+    const displaySpeed = Math.abs(fSpeed) < 0.15 ? 0 : fSpeed;
+    if (Math.round(displaySpeed * 10) !== Math.round(debugSpeed * 10)) {
+      setDebugSpeed(displaySpeed);
     }
 
     // Brake bias: when turning, unload front wheels (2,3) so they keep lateral grip.
@@ -153,14 +149,20 @@ export const useControls = (vehicleApi: any, chassisApi: any, enabled = true) =>
         vehicleApi.applyEngineForce(0, 3);
       }
     } else {
-      vehicleApi.setBrake(0, 0);
-      vehicleApi.setBrake(0, 1);
-      vehicleApi.setBrake(0, 2);
-      vehicleApi.setBrake(0, 3);
       vehicleApi.applyEngineForce(0, 0);
       vehicleApi.applyEngineForce(0, 1);
       vehicleApi.applyEngineForce(0, 2);
       vehicleApi.applyEngineForce(0, 3);
+      const coastBrake = Math.abs(fSpeed) > 0.15 ? CAR_OPTIONS.coastBrakeForce : 0;
+      vehicleApi.setBrake(coastBrake, 0);
+      vehicleApi.setBrake(coastBrake, 1);
+      if (left || right) {
+        vehicleApi.setBrake(0, 2);
+        vehicleApi.setBrake(0, 3);
+      } else {
+        vehicleApi.setBrake(coastBrake, 2);
+        vehicleApi.setBrake(coastBrake, 3);
+      }
     }
 
     // --- Steer (speed-sensitive: less angle at high speed) ---
