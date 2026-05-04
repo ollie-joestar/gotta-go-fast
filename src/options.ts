@@ -16,9 +16,9 @@ export const CAR_OPTIONS = {
   reverseThreshold: 0.4,   // forward speed (m/s) below which braking switches to reverse
 
   // --- Steering ---
-  maxSteer: 0.6,          // max steering angle in radians (~35 degrees)
-  minSteer: 0.05,
-  steerSpeedMax: 40,       // speed (m/s) at which steering is clamped to minSteer
+  maxSteer: 0.60,          // max steering angle in radians (~35 degrees)
+  minSteer: 0.10,
+  steerSpeedMax: 42,       // speed (m/s) at which steering is clamped to minSteer
   // steerStep: 0.05,        // how much to change steer angle per frame of input
 
   // --- Suspension ---

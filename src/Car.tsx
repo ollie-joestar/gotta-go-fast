@@ -62,7 +62,6 @@ export function Car({ thirdPerson, lapKey, onSaveReady, onDebugSpeed, onDebugTra
   ]
 
   const camYaw = useRef(0)
-  const camInitialized = useRef(false)
   const velocityRef = useRef<[number, number, number]>([0, 0, 0])
   const chassisPosRef = useRef<[number, number, number]>([0, 1, 0])
   const chassisQuatRef = useRef<[number, number, number, number]>([0, 0, 0, 1])
@@ -72,10 +71,6 @@ export function Car({ thirdPerson, lapKey, onSaveReady, onDebugSpeed, onDebugTra
   useEffect(() => {
     onSaveReady(save)
   }, [save, onSaveReady])
-
-  useEffect(() => {
-    camInitialized.current = false
-  }, [lapKey])
 
   const [chassisBody, chassisApi] = useBox(
     () => ({ args: chassisBodyArgs, mass: CAR_OPTIONS.mass, position }),
@@ -155,24 +150,19 @@ export function Car({ thirdPerson, lapKey, onSaveReady, onDebugSpeed, onDebugTra
 
     if (!thirdPerson) return
 
-    // Get car quaternion to extract heading and forward direction
     const [qx, qy, qz, qw] = chassisQuatRef.current
-    const carQuat = _tq.set(qx, qy, qz, qw)
 
-    // Extract car yaw only (ignore physics pitch/roll so camera stays level)
-    const targetYaw = _euler.setFromQuaternion(carQuat, 'YXZ').y
-
-    // Snap on first frame so camera doesn't sweep from yaw=0 on spawn/respawn
-    if (!camInitialized.current) {
-      camYaw.current = targetYaw
-      camInitialized.current = true
-    }
+    // Project car's forward onto the horizontal plane for a yaw that is completely
+    // immune to car pitch and roll — Euler decomposition would flip under those conditions
+    _tv.set(0, 0, -1).applyQuaternion(_tq2.set(qx, qy, qz, qw))
+    _tv.y = 0
+    if (_tv.lengthSq() > 1e-6) _tv.normalize()
+    const targetYaw = Math.atan2(-_tv.x, -_tv.z)
 
     // Spring the camera yaw toward car heading — this is what gives the
     // arcade "camera swings into corners" feel without any world-space position lag
     const yawT = 1 - Math.pow(1 - CAR_OPTIONS.cameraYawLerp, delta * 60)
     let yawDiff = targetYaw - camYaw.current
-    // Clamp to [-PI, PI] so we always rotate the short way around
     while (yawDiff > Math.PI) yawDiff -= Math.PI * 2
     while (yawDiff < -Math.PI) yawDiff += Math.PI * 2
     camYaw.current += yawDiff * yawT
@@ -234,4 +224,3 @@ const _tv2 = new THREE.Vector3()
 const _tq = new THREE.Quaternion()
 const _tq2 = new THREE.Quaternion()
 const _up = new THREE.Vector3(0, 1, 0)
-const _euler = new THREE.Euler()
