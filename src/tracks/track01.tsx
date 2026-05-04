@@ -1,6 +1,6 @@
 import { ColliderBox as CBox } from "../ColliderBox";
 import { TriggerBox } from "../TriggerBox";
-import { useRef } from "react";
+import React, { useRef } from "react";
 
 export const CAR_START_POSITION: [number, number, number] = [0, 1, 0];
 export const TRACK_ID = "track_01" as string
@@ -60,10 +60,12 @@ export const CHECKPOINTS: CheckpointDef[] = [
 
 interface CollidersProps {
   onTrigger: () => void
+  cooldownRef?: React.MutableRefObject<number>
 }
 
-export function Colliders({ onTrigger }: CollidersProps) {
-  const lastTriggerTime = useRef<number>(0);
+export function Colliders({ onTrigger, cooldownRef }: CollidersProps) {
+  const internalCooldown = useRef<number>(0);
+  const lastTriggerTime = cooldownRef ?? internalCooldown;
   const COOLDOWN_MS = 3000;
 
   return (

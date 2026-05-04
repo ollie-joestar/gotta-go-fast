@@ -15,14 +15,17 @@ import * as THREE from "three"
 
 interface CarProps {
   thirdPerson: boolean
-  isRecording: boolean
+  lapKey: number
   onSaveReady: (saveFn: (lapMs: number) => void) => void
   onDebugSpeed: (speed: number) => void
+  onDebugTransform?: (pos: [number, number, number], quat: [number, number, number, number]) => void
+  onLapTime?: (ms: number) => void
+  lapStartTimeRef?: React.RefObject<number | null>
   currentCheckpoint?: number
   isBot?: boolean
 }
 
-export function Car({ thirdPerson, isRecording, onSaveReady, onDebugSpeed, currentCheckpoint = 0, isBot = false }: CarProps) {
+export function Car({ thirdPerson, lapKey, onSaveReady, onDebugSpeed, onDebugTransform, onLapTime, lapStartTimeRef, currentCheckpoint = 0, isBot = false }: CarProps) {
   const { scene } = useGLTF("/models/car.glb")
   const size = CAR_OPTIONS.size
   const position = CAR_START_POSITION
@@ -64,7 +67,7 @@ export function Car({ thirdPerson, isRecording, onSaveReady, onDebugSpeed, curre
   const chassisPosRef = useRef<[number, number, number]>([0, 1, 0])
   const chassisQuatRef = useRef<[number, number, number, number]>([0, 0, 0, 1])
 
-  const { tick, save } = useGhostRecorder(chassisRef, isRecording)
+  const { tick, save } = useGhostRecorder(chassisRef, lapKey)
 
   useEffect(() => {
     onSaveReady(save)
@@ -119,6 +122,9 @@ export function Car({ thirdPerson, isRecording, onSaveReady, onDebugSpeed, curre
     if (!chassisBody.current) return
 
     tick(state.clock.getElapsedTime() * 1000)
+
+    onDebugTransform?.(chassisPosRef.current, chassisQuatRef.current)
+    onLapTime?.(lapStartTimeRef?.current != null ? Date.now() - lapStartTimeRef.current : 0)
 
     // Fast lerp factor — nearly instant, just removes physics-render timing jitter
     const visualT = 1 - Math.pow(1 - CAR_OPTIONS.visualLerpFactor, delta * 60)

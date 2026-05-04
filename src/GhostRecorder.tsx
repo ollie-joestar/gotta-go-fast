@@ -9,24 +9,27 @@ const RECORD_INTERVAL_MS = 1000 / RECORD_HZ
 
 export function useGhostRecorder(
   chassisRef: React.RefObject<THREE.Mesh | null>,
-  isRecording: boolean,
+  lapKey: number,
   trackId: string = TRACK_ID,
+  userId: string = "player1"
 ) {
   const framesRef = useRef<GhostFrame[]>([])
   const startTimeRef = useRef<number | null>(null)
   const lastRecordRef = useRef<number>(0)
-  const isRecordingRef = useRef<boolean>(false)  // ← ref mirror of isRecording
+  const isRecordingRef = useRef<boolean>(false)
 
-  // keep ref in sync so tick/save closures never go stale
   useEffect(() => {
-    isRecordingRef.current = isRecording
-    if (isRecording) {
+    if (lapKey > 0) {
       framesRef.current = []
       startTimeRef.current = null
       lastRecordRef.current = 0
-      console.log("GhostRecorder: reset and started")
+      isRecordingRef.current = true
+      console.log("GhostRecorder: reset and started, lapKey:", lapKey)
+    } else {
+      isRecordingRef.current = false
+      console.log("GhostRecorder: stopped")
     }
-  }, [isRecording])
+  }, [lapKey])
 
   // stable reference — never recreated
   const tick = useCallback((now: number) => {
@@ -65,8 +68,9 @@ export function useGhostRecorder(
     }
 
     const ghostData: GhostData = {
-      userId: "player1",  // In a real app, you'd get this from auth/user profile
-      trackId,
+      userId: userId,
+      trackId: TRACK_ID,
+      version: VERSION,
       date: new Date().toISOString(),
       lapTimeMs,
       frames: framesRef.current,
@@ -79,7 +83,7 @@ export function useGhostRecorder(
     const url = URL.createObjectURL(blob)
     const a = document.createElement("a")
     a.href = url
-    a.download = `ghost_${trackId}_${lapTimeMs}ms.json`
+    a.download = `ghost_${userId}_${trackId}_${lapTimeMs}ms.json`
     document.body.appendChild(a)
     a.click()
     document.body.removeChild(a)
