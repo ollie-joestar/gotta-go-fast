@@ -10,7 +10,7 @@ export const CAR_OPTIONS = {
   force: 8001,
   differential: 0.5,       // fraction of force sent to rear (0 = FWD, 1 = RWD, 0.5 = AWD)
   revForceRatio: 0.5,      // reverse force as a fraction of total force
-  brakeForce: 100,
+  brakeForce: 110,
   coastBrakeForce: 20,     // passive deceleration applied when no throttle/brake input
   frontBrakeBias: 0.05,    // front brake fraction when turning (reduces understeer)
   reverseThreshold: 0.4,   // forward speed (m/s) below which braking switches to reverse
@@ -19,7 +19,7 @@ export const CAR_OPTIONS = {
   maxSteer: 0.6,          // max steering angle in radians (~35 degrees)
   minSteer: 0.05,
   steerSpeedMax: 40,       // speed (m/s) at which steering is clamped to minSteer
-  steerStep: 0.05,        // how much to change steer angle per frame of input
+  // steerStep: 0.05,        // how much to change steer angle per frame of input
 
   // --- Suspension ---
   suspensionStiffness: 45,
@@ -50,7 +50,7 @@ export const CAR_OPTIONS = {
   cameraDistance: 10,
   cameraHeight: 5,
   cameraLookAhead: 4,      // how far ahead of the car the camera looks (m)
-  cameraLerpFactor: 0.16,  // smoothing: lower = more lag, higher = snappier
+  cameraYawLerp: 0.07,     // how fast camera heading follows car heading (arcade swing feel)
   cameraFovBase: 40,
   cameraFovMax: 65,
   cameraFovSpeedMax: 50,   // speed (m/s) at which FOV reaches max

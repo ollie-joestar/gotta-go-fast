@@ -61,8 +61,8 @@ export function Car({ thirdPerson, lapKey, onSaveReady, onDebugSpeed, onDebugTra
     useRef<[number, number, number, number]>([0, 0, 0, 1]),
   ]
 
-  const smoothCamPos = useRef(new THREE.Vector3(0, CAR_OPTIONS.cameraHeight, CAR_OPTIONS.cameraDistance))
-  const smoothLookAt = useRef(new THREE.Vector3(0, 0, 0))
+  const camYaw = useRef(0)
+  const camInitialized = useRef(false)
   const velocityRef = useRef<[number, number, number]>([0, 0, 0])
   const chassisPosRef = useRef<[number, number, number]>([0, 1, 0])
   const chassisQuatRef = useRef<[number, number, number, number]>([0, 0, 0, 1])
@@ -72,6 +72,10 @@ export function Car({ thirdPerson, lapKey, onSaveReady, onDebugSpeed, onDebugTra
   useEffect(() => {
     onSaveReady(save)
   }, [save, onSaveReady])
+
+  useEffect(() => {
+    camInitialized.current = false
+  }, [lapKey])
 
   const [chassisBody, chassisApi] = useBox(
     () => ({ args: chassisBodyArgs, mass: CAR_OPTIONS.mass, position }),
@@ -151,27 +155,40 @@ export function Car({ thirdPerson, lapKey, onSaveReady, onDebugSpeed, onDebugTra
 
     if (!thirdPerson) return
 
-    // Use physics-subscribed refs instead of matrixWorld to avoid stale reads between physics ticks
-    const [px, py, pz] = chassisPosRef.current
+    // Get car quaternion to extract heading and forward direction
     const [qx, qy, qz, qw] = chassisQuatRef.current
-    const pos = new THREE.Vector3(px, py, pz)
-    const quat = new THREE.Quaternion(qx, qy, qz, qw)
-    const wDir = new THREE.Vector3(0, 0, -1).applyQuaternion(quat).normalize()
+    const carQuat = _tq.set(qx, qy, qz, qw)
 
-    const idealPos = pos.clone()
-      .add(wDir.clone().multiplyScalar(-CAR_OPTIONS.cameraDistance))
-      .add(new THREE.Vector3(0, CAR_OPTIONS.cameraHeight, 0))
+    // Extract car yaw only (ignore physics pitch/roll so camera stays level)
+    const targetYaw = _euler.setFromQuaternion(carQuat, 'YXZ').y
 
-    // Frame-rate independent lerp: same visual smoothing at any refresh rate
-    const posT = 1 - Math.pow(1 - CAR_OPTIONS.cameraLerpFactor, delta * 60)
-    smoothCamPos.current.lerp(idealPos, posT)
-    state.camera.position.copy(smoothCamPos.current)
+    // Snap on first frame so camera doesn't sweep from yaw=0 on spawn/respawn
+    if (!camInitialized.current) {
+      camYaw.current = targetYaw
+      camInitialized.current = true
+    }
 
-    // Smooth the lookAt target at the same rate — without this the aim snaps at the
-    // physics tick rate while the position is smooth, causing a "double image" ghost
-    const idealLookAt = pos.clone().add(wDir.clone().multiplyScalar(CAR_OPTIONS.cameraLookAhead))
-    smoothLookAt.current.lerp(idealLookAt, posT)
-    state.camera.lookAt(smoothLookAt.current)
+    // Spring the camera yaw toward car heading — this is what gives the
+    // arcade "camera swings into corners" feel without any world-space position lag
+    const yawT = 1 - Math.pow(1 - CAR_OPTIONS.cameraYawLerp, delta * 60)
+    let yawDiff = targetYaw - camYaw.current
+    // Clamp to [-PI, PI] so we always rotate the short way around
+    while (yawDiff > Math.PI) yawDiff -= Math.PI * 2
+    while (yawDiff < -Math.PI) yawDiff += Math.PI * 2
+    camYaw.current += yawDiff * yawT
+
+    // Camera position: visual car pos + fixed offset rotated by camera yaw.
+    // Using smoothBodyPos (the visual position) means camera and rendered car are
+    // always in sync — no screen-space jitter regardless of physics tick timing.
+    const carPos = smoothBodyPos.current
+    _tq.setFromAxisAngle(_up, camYaw.current)
+    _tv.set(0, CAR_OPTIONS.cameraHeight, CAR_OPTIONS.cameraDistance).applyQuaternion(_tq)
+    state.camera.position.copy(carPos).add(_tv)
+
+    // Look at car's visual position + look-ahead along car's actual forward
+    _tv.set(0, 0, -1).applyQuaternion(_tq2.set(qx, qy, qz, qw))
+    _tv2.copy(carPos).addScaledVector(_tv, CAR_OPTIONS.cameraLookAhead)
+    state.camera.lookAt(_tv2)
 
     const [vx, vy, vz] = velocityRef.current
     const speed = Math.sqrt(vx * vx + vy * vy + vz * vz)
@@ -213,4 +230,8 @@ useGLTF.preload("/models/car.glb")
 
 // Module-level scratch objects to avoid allocating per frame
 const _tv = new THREE.Vector3()
+const _tv2 = new THREE.Vector3()
 const _tq = new THREE.Quaternion()
+const _tq2 = new THREE.Quaternion()
+const _up = new THREE.Vector3(0, 1, 0)
+const _euler = new THREE.Euler()
