@@ -60,7 +60,7 @@ export const CAR_OPTIONS = {
   // Fast lerp applied to car body and wheel visuals each frame.
   // Removes 1-frame timing jitter between physics worker updates and render without
   // adding any perceptible visual lag (0.85 = ~96% there within 2 frames at 60fps).
-  visualLerpFactor: 0.2,
+  visualLerpFactor: 0.3,
 } as const
 
 // Derived drivetrain values — computed once from CAR_OPTIONS

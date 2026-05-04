@@ -1,6 +1,7 @@
 // GhostRecorder.ts
 import { useEffect, useRef, useCallback } from "react"
 import type { GhostData, GhostFrame } from "./DataTypes"
+import { TRACK_ID, VERSION } from "./tracks/track01"
 import * as THREE from "three"
 
 const RECORD_HZ = 10
@@ -9,7 +10,7 @@ const RECORD_INTERVAL_MS = 1000 / RECORD_HZ
 export function useGhostRecorder(
   chassisRef: React.RefObject<THREE.Mesh | null>,
   isRecording: boolean,
-  trackId: string = "track_01"
+  trackId: string = TRACK_ID,
 ) {
   const framesRef = useRef<GhostFrame[]>([])
   const startTimeRef = useRef<number | null>(null)
@@ -64,6 +65,7 @@ export function useGhostRecorder(
     }
 
     const ghostData: GhostData = {
+      userId: "player1",  // In a real app, you'd get this from auth/user profile
       trackId,
       date: new Date().toISOString(),
       lapTimeMs,

@@ -23,9 +23,8 @@ function FPSCap({ fps = 60 }) {
 }
 import { Car } from "./Car"
 import { Ground } from "./Ground"
-import { Colliders } from "./Colliders"
+import { Colliders, CHECKPOINTS } from "./tracks/track01"
 import { Checkpoint } from "./Checkpoint"
-import { CHECKPOINTS } from "./checkpoints"
 
 interface SceneProps {
   onDebugSpeed: (speed: number) => void
@@ -56,7 +55,7 @@ export function Scene({ onDebugSpeed }: SceneProps) {
   // ← no deps, reads from ref instead of closing over state
   const handleTrigger = useCallback(() => {
     // THIS LINE DISABLES RECORDING, UNCOMMENT TO ENABLE
-    return
+    // return
     // ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
     console.log("handleTrigger called, isRecording:", isRecordingRef.current)
     if (!isRecordingRef.current) {

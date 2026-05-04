@@ -2,7 +2,7 @@ import { useEffect, useRef } from "react"
 import { useFrame } from "@react-three/fiber"
 import { useAISocket } from "./useAISocket"
 import type { AIFrame, Checkpoints } from "./aiTypes"
-import type { CheckpointDef } from "./checkpoints"
+import type { CheckpointDef } from "./tracks/track01"
 import { CAR_OPTIONS, FFORCE, RFORCE } from "./options"
 
 const BRAKE_FORCE = CAR_OPTIONS.brakeForce

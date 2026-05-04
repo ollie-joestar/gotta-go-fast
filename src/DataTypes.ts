@@ -7,6 +7,7 @@ export interface GhostFrame {
 
 export interface GhostData {
   trackId: string
+  userId: string
   date: string
   lapTimeMs: number
   frames: GhostFrame[]

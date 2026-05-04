@@ -9,7 +9,7 @@ import { useControls } from "./Controller"
 import { useBotController } from "./BotController"
 import { useFrame } from "@react-three/fiber"
 import { useGhostRecorder } from "./GhostRecorder"
-import { CHECKPOINTS } from "./checkpoints"
+import { CHECKPOINTS, CAR_START_POSITION } from "./tracks/track01"
 import { CAR_OPTIONS } from "./options"
 import * as THREE from "three"
 
@@ -25,7 +25,7 @@ interface CarProps {
 export function Car({ thirdPerson, isRecording, onSaveReady, onDebugSpeed, currentCheckpoint = 0, isBot = false }: CarProps) {
   const { scene } = useGLTF("/models/car.glb")
   const size = CAR_OPTIONS.size
-  const position: [number, number, number] = [0, 1, 0]
+  const position = CAR_START_POSITION
   const wheelRadius = CAR_OPTIONS.wheelRadius
   const chassisBodyArgs = size
 
