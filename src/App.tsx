@@ -35,7 +35,7 @@ export default function App() {
   }, [])
 
   const handleDebugSpeed = useCallback((speed: number) => {
-    if (speedElRef.current) speedElRef.current.textContent = `fSpeed: ${speed.toFixed(2)}`
+    if (speedElRef.current) speedElRef.current.textContent = `speed: ${speed.toFixed(2)}`
   }, [])
 
   useEffect(() => {
@@ -97,7 +97,7 @@ export default function App() {
           0:00.00
         </div>
         {showDebug && <>
-          <div ref={speedElRef}>fSpeed: 0.00</div>
+          <div ref={speedElRef}>speed: 0.00</div>
           <div ref={posElRef}>x: 0.000  y: 0.000  z: 0.000</div>
           <div ref={quatElRef} style={{ color: "#aaddff" }}>qx: 0.0000  qy: 0.0000  qz: 0.0000  qw: 1.0000</div>
         </>}
