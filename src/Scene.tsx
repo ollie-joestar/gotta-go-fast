@@ -56,6 +56,7 @@ export function Scene({ onDebugSpeed, onDebugTransform, onLapTime, ghostData, on
         setLapKey(0)
         lapStartTime.current = null
         triggerCooldownRef.current = 0
+        setCurrentCheckpoint(0)
         console.log("Recording reset via 'r'")
       }
     }
