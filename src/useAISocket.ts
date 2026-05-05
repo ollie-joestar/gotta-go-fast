@@ -48,9 +48,29 @@ export function useAISocket() {
     return () => ws.current?.close()
   }, [])
 
+  function roundFrame(frame: AIFrame): AIFrame {
+    const r1 = (n: number) => Math.round(n * 10) / 10
+    const r3 = (n: number) => Math.round(n * 1000) / 1000
+    const r4 = (n: number) => Math.round(n * 10000) / 10000
+    const v3 = (v: [number, number, number], fn: (n: number) => number): [number, number, number] =>
+      [fn(v[0]), fn(v[1]), fn(v[2])]
+    return {
+      position: v3(frame.position, r1),
+      quaternion: [r4(frame.quaternion[0]), r4(frame.quaternion[1]), r4(frame.quaternion[2]), r4(frame.quaternion[3])],
+      velocity: v3(frame.velocity, r3),
+      totalCheckpoints: frame.totalCheckpoints,
+      currentCheckpoint: frame.currentCheckpoint,
+      checkpoints: {
+        0: v3(frame.checkpoints[0], r1),
+        1: v3(frame.checkpoints[1], r1),
+        2: v3(frame.checkpoints[2], r1),
+      }
+    }
+  }
+
   function sendFrame(frame: AIFrame) {
     if (ws.current?.readyState === WebSocket.OPEN) {
-      ws.current.send(JSON.stringify(frame))
+      ws.current.send(JSON.stringify(roundFrame(frame)))
     }
   }
 

@@ -7,18 +7,18 @@ export const CAR_OPTIONS = {
   wheelRadius: 0.43,
 
   // --- Engine / Drivetrain ---
-  force: 8001,
+  force: 9001,
   differential: 0.5,       // fraction of force sent to rear (0 = FWD, 1 = RWD, 0.5 = AWD)
   revForceRatio: 0.5,      // reverse force as a fraction of total force
   brakeForce: 110,
-  coastBrakeForce: 20,     // passive deceleration applied when no throttle/brake input
+  coastBrakeForce: 25,     // passive deceleration applied when no throttle/brake input
   frontBrakeBias: 0.05,    // front brake fraction when turning (reduces understeer)
   reverseThreshold: 0.4,   // forward speed (m/s) below which braking switches to reverse
 
   // --- Steering ---
-  maxSteer: 0.6,          // max steering angle in radians (~35 degrees)
-  minSteer: 0.05,
-  steerSpeedMax: 40,       // speed (m/s) at which steering is clamped to minSteer
+  maxSteer: 0.55,          // max steering angle in radians (~30 degrees)
+  minSteer: 0.10,
+  steerSpeedMax: 45,       // speed (m/s) at which steering is clamped to minSteer
   // steerStep: 0.05,        // how much to change steer angle per frame of input
 
   // --- Suspension ---
@@ -36,7 +36,7 @@ export const CAR_OPTIONS = {
   customSlidingRotationalSpeed: -30,
   useCustomSlidingRotationalSpeed: false,
   wheelCylinderThickness: 0.42,
-  wheelCylinderSegments: 16,
+  wheelCylinderSegments: 20,
   wheelMass: 100,
 
   // --- Wheel geometry factors (multiplied against chassis dimensions) ---
@@ -55,12 +55,12 @@ export const CAR_OPTIONS = {
   cameraFovMax: 65,
   cameraFovSpeedMax: 50,   // speed (m/s) at which FOV reaches max
   cameraFovLerp: 0.24,     // FOV transition smoothness
-
+  visualLerpFactor: 0.50,
+  // ^^^^^^^^^^^^^^^^^^^^^^^^
   // --- Visual smoothing ---
   // Fast lerp applied to car body and wheel visuals each frame.
   // Removes 1-frame timing jitter between physics worker updates and render without
   // adding any perceptible visual lag (0.85 = ~96% there within 2 frames at 60fps).
-  visualLerpFactor: 0.30,
 } as const
 
 // Derived drivetrain values — computed once from CAR_OPTIONS
