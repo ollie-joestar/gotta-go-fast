@@ -153,7 +153,7 @@ export const useControls = (vehicleApi: any, chassisApi: any, enabled = true) =>
       vehicleApi.applyEngineForce(0, 1);
       vehicleApi.applyEngineForce(0, 2);
       vehicleApi.applyEngineForce(0, 3);
-      const coastBrake = Math.abs(fSpeed) > 0.15 ? CAR_OPTIONS.coastBrakeForce : 0;
+      const coastBrake = Math.abs(fSpeed) > 0.10 ? CAR_OPTIONS.coastBrakeForce : 0;
       vehicleApi.setBrake(coastBrake, 0);
       vehicleApi.setBrake(coastBrake, 1);
       if (left || right) {

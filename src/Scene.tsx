@@ -27,16 +27,18 @@ import { Colliders, CHECKPOINTS } from "./tracks/track01"
 import { Checkpoint } from "./Checkpoint"
 import { GhostRenderer } from "./GhostRenderer"
 import type { GhostData } from "./DataTypes"
+import type { AIDebugFrame } from "./aiTypes"
 
 interface SceneProps {
   onDebugSpeed: (speed: number) => void
   onDebugTransform?: (pos: [number, number, number], quat: [number, number, number, number]) => void
   onLapTime?: (ms: number) => void
   ghostData?: GhostData
+  onDebugAIFrame?: (frame: AIDebugFrame) => void
 }
 
 // Scene.tsx
-export function Scene({ onDebugSpeed, onDebugTransform, onLapTime, ghostData }: SceneProps) {
+export function Scene({ onDebugSpeed, onDebugTransform, onLapTime, ghostData, onDebugAIFrame }: SceneProps) {
   const [thirdPerson, setThirdPerson] = useState<boolean>(true)
   const [lapKey, setLapKey] = useState<number>(0)
   const lapKeyRef = useRef<number>(0)
@@ -94,7 +96,6 @@ export function Scene({ onDebugSpeed, onDebugTransform, onLapTime, ghostData }: 
           position={cp.position}
           size={cp.size}
           color={cp.color}
-          onTrigger={(idx) => setCurrentCheckpoint((idx + 1) % CHECKPOINTS.length)}
         />
       ))}
       <Car
@@ -107,6 +108,9 @@ export function Scene({ onDebugSpeed, onDebugTransform, onLapTime, ghostData }: 
         lapStartTimeRef={lapStartTime}
         currentCheckpoint={currentCheckpoint}
         isBot={false}
+        checkpoints={CHECKPOINTS}
+        onCheckpointTrigger={(idx) => setCurrentCheckpoint((idx + 1) % CHECKPOINTS.length)}
+        onDebugAIFrame={onDebugAIFrame}
       />
       {ghostData && <GhostRenderer ghostData={ghostData} startSignal={ghostStartSignal} />}
     </Suspense>

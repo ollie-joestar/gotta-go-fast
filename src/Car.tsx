@@ -10,7 +10,9 @@ import { useBotController } from "./BotController"
 import { useFrame } from "@react-three/fiber"
 import { useGhostRecorder } from "./GhostRecorder"
 import { CHECKPOINTS, CAR_START_POSITION } from "./tracks/track01"
+import type { CheckpointDef } from "./tracks/track01"
 import { CAR_OPTIONS } from "./options"
+import type { AIDebugFrame } from "./aiTypes"
 import * as THREE from "three"
 
 interface CarProps {
@@ -23,9 +25,12 @@ interface CarProps {
   lapStartTimeRef?: React.RefObject<number | null>
   currentCheckpoint?: number
   isBot?: boolean
+  checkpoints?: CheckpointDef[]
+  onCheckpointTrigger?: (index: number) => void
+  onDebugAIFrame?: (frame: AIDebugFrame) => void
 }
 
-export function Car({ thirdPerson, lapKey, onSaveReady, onDebugSpeed, onDebugTransform, onLapTime, lapStartTimeRef, currentCheckpoint = 0, isBot = false }: CarProps) {
+export function Car({ thirdPerson, lapKey, onSaveReady, onDebugSpeed, onDebugTransform, onLapTime, lapStartTimeRef, currentCheckpoint = 0, isBot = false, checkpoints, onCheckpointTrigger, onDebugAIFrame }: CarProps) {
   const { scene } = useGLTF("/models/car.glb")
   const size = CAR_OPTIONS.size
   const position = CAR_START_POSITION
@@ -38,6 +43,9 @@ export function Car({ thirdPerson, lapKey, onSaveReady, onDebugSpeed, onDebugTra
   // Smoothed body position/quaternion — lerped each frame toward physics subscription
   const smoothBodyPos = useRef(new THREE.Vector3(0, 1, 0))
   const smoothBodyQuat = useRef(new THREE.Quaternion())
+
+  // Which checkpoints the car is currently inside — prevents re-firing while overlapping
+  const cpInsideRef = useRef<boolean[]>([])
 
   // Visual wheel refs — rendered at scene root, positioned via subscribed world positions
   const visualWheelRefs = [
@@ -125,6 +133,41 @@ export function Car({ thirdPerson, lapKey, onSaveReady, onDebugSpeed, onDebugTra
     onDebugTransform?.(chassisPosRef.current, chassisQuatRef.current)
     onLapTime?.(lapStartTimeRef?.current != null ? Date.now() - lapStartTimeRef.current : 0)
 
+    // Pure AABB checkpoint detection — no physics body on checkpoints, zero bump
+    if (checkpoints && onCheckpointTrigger) {
+      const [px, py, pz] = chassisPosRef.current
+      for (let i = 0; i < checkpoints.length; i++) {
+        const [cx, cy, cz] = checkpoints[i].position
+        const [sx, sy, sz] = checkpoints[i].size
+        const inside =
+          Math.abs(px - cx) <= sx / 2 &&
+          Math.abs(py - cy) <= sy / 2 &&
+          Math.abs(pz - cz) <= sz / 2
+        if (inside && !cpInsideRef.current[i]) onCheckpointTrigger(i)
+        cpInsideRef.current[i] = inside
+      }
+    }
+
+    // AI debug frame — assembled each frame for both player and bot
+    if (onDebugAIFrame) {
+      const total = CHECKPOINTS.length
+      const c0 = CHECKPOINTS[(currentCheckpoint + 0) % total]
+      const c1 = CHECKPOINTS[(currentCheckpoint + 1) % total]
+      const c2 = CHECKPOINTS[(currentCheckpoint + 2) % total]
+      onDebugAIFrame({
+        position: chassisPosRef.current,
+        quaternion: chassisQuatRef.current,
+        velocity: velocityRef.current,
+        totalCheckpoints: total,
+        currentCheckpoint,
+        nextCheckpoints: [
+          { position: c0.position, size: c0.size },
+          { position: c1.position, size: c1.size },
+          { position: c2.position, size: c2.size },
+        ],
+      })
+    }
+
     // Fast lerp factor — nearly instant, just removes physics-render timing jitter
     const visualT = 1 - Math.pow(1 - CAR_OPTIONS.visualLerpFactor, delta * 60)
 
@@ -175,8 +218,9 @@ export function Car({ thirdPerson, lapKey, onSaveReady, onDebugSpeed, onDebugTra
     _tv.set(0, CAR_OPTIONS.cameraHeight, CAR_OPTIONS.cameraDistance).applyQuaternion(_tq)
     state.camera.position.copy(carPos).add(_tv)
 
-    // Look at car's visual position + look-ahead along car's actual forward
-    _tv.set(0, 0, -1).applyQuaternion(_tq2.set(qx, qy, qz, qw))
+    // Look-at: derive direction from camYaw (already spring-smoothed) so camera
+    // position and look-at are always consistent — no physics quat involved, no jitter.
+    _tv.set(-Math.sin(camYaw.current), 0, -Math.cos(camYaw.current))
     _tv2.copy(carPos).addScaledVector(_tv, CAR_OPTIONS.cameraLookAhead)
     state.camera.lookAt(_tv2)
 

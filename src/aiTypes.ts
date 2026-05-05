@@ -5,6 +5,21 @@ export interface Checkpoints {
   2: [number, number, number]
 }
 
+export interface CheckpointDebug {
+  position: [number, number, number]
+  size: [number, number, number]
+}
+
+// Full frame used for the in-game debug overlay (superset of AIFrame — includes sizes).
+export interface AIDebugFrame {
+  position: [number, number, number]
+  quaternion: [number, number, number, number]
+  velocity: [number, number, number]
+  totalCheckpoints: number
+  currentCheckpoint: number
+  nextCheckpoints: [CheckpointDebug, CheckpointDebug, CheckpointDebug]
+}
+
 export interface AIFrame {
   position: [number, number, number]
   quaternion: [number, number, number, number]
