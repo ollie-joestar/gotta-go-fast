@@ -10,6 +10,7 @@ const FBRAKE_BIAS = CAR_OPTIONS.frontBrakeBias
 const MAX_STEER = CAR_OPTIONS.maxSteer
 const MIN_STEER = CAR_OPTIONS.minSteer
 const STEER_SPEED_MAX = CAR_OPTIONS.steerSpeedMax
+const FBRAKE_S_BIAS = CAR_OPTIONS.frontStraightBias;
 
 const CONSOLE_LOG_INTERVAL = 10000
 
@@ -157,7 +158,7 @@ export function useBotController({
     }
     /* Driving */
     const turning = left || right
-    const frontBrake = turning ? BRAKE_FORCE * FBRAKE_BIAS : BRAKE_FORCE
+    const frontBrake = turning ? BRAKE_FORCE * FBRAKE_BIAS : BRAKE_FORCE * FBRAKE_S_BIAS;
     const rearBrake = BRAKE_FORCE
 
     if (forward) {

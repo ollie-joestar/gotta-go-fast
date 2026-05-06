@@ -10,9 +10,10 @@ export const CAR_OPTIONS = {
   force: 9001,
   differential: 0.5,       // fraction of force sent to rear (0 = FWD, 1 = RWD, 0.5 = AWD)
   revForceRatio: 0.5,      // reverse force as a fraction of total force
-  brakeForce: 110,
+  brakeForce: 220,
   coastBrakeForce: 25,     // passive deceleration applied when no throttle/brake input
-  frontBrakeBias: 0.05,    // front brake fraction when turning (reduces understeer)
+  frontBrakeBias: 0.25,    // front brake fraction when turning (reduces understeer)
+  frontStraightBias: 0.55, // front brake fraction when going straight
   reverseThreshold: 0.4,   // forward speed (m/s) below which braking switches to reverse
 
   // --- Steering ---

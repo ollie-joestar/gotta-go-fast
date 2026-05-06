@@ -237,7 +237,10 @@ export function Car({ thirdPerson, lapKey, onSaveReady, onDebugSpeed, onDebugTra
     <>
       {/* Physics bodies — cannon needs mounted refs; nothing here is rendered */}
       <group ref={vehicle}>
-        <mesh ref={chassisBody} visible={false} />
+        {/* <mesh ref={chassisBody}> */}
+        {/*   <boxGeometry args={size} /> */}
+        {/*   <meshBasicMaterial color="red" wireframe /> */}
+        {/* </mesh> */}
         <group ref={wheels[0] as React.MutableRefObject<THREE.Group>} visible={false} />
         <group ref={wheels[1] as React.MutableRefObject<THREE.Group>} visible={false} />
         <group ref={wheels[2] as React.MutableRefObject<THREE.Group>} visible={false} />

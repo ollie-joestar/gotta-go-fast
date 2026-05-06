@@ -35,11 +35,13 @@ interface SceneProps {
   onLapTime?: (ms: number) => void
   ghostData?: GhostData
   onDebugAIFrame?: (frame: AIDebugFrame) => void
+  showCheckpoints?: boolean
 }
 
 // Scene.tsx
-export function Scene({ onDebugSpeed, onDebugTransform, onLapTime, ghostData, onDebugAIFrame }: SceneProps) {
+export function Scene({ onDebugSpeed, onDebugTransform, onLapTime, ghostData, onDebugAIFrame, showCheckpoints = false }: SceneProps) {
   const [thirdPerson, setThirdPerson] = useState<boolean>(true)
+  const [isBot, setIsBot] = useState<boolean>(false)
   const [lapKey, setLapKey] = useState<number>(0)
   const lapKeyRef = useRef<number>(0)
   const [currentCheckpoint, setCurrentCheckpoint] = useState<number>(0)
@@ -51,6 +53,7 @@ export function Scene({ onDebugSpeed, onDebugTransform, onLapTime, ghostData, on
   useEffect(() => {
     function keydownHandler(e: KeyboardEvent) {
       if (e.key === "c") setThirdPerson(prev => !prev)
+      if (e.key === "b") setIsBot(prev => !prev)
       if (e.key === "r") {
         lapKeyRef.current = 0
         setLapKey(0)
@@ -97,6 +100,7 @@ export function Scene({ onDebugSpeed, onDebugTransform, onLapTime, ghostData, on
           position={cp.position}
           size={cp.size}
           color={cp.color}
+          visible={showCheckpoints}
         />
       ))}
       <Car
@@ -108,7 +112,7 @@ export function Scene({ onDebugSpeed, onDebugTransform, onLapTime, ghostData, on
         onLapTime={onLapTime}
         lapStartTimeRef={lapStartTime}
         currentCheckpoint={currentCheckpoint}
-        isBot={false}
+        isBot={isBot}
         checkpoints={CHECKPOINTS}
         onCheckpointTrigger={(idx) => setCurrentCheckpoint((idx + 1) % CHECKPOINTS.length)}
         onDebugAIFrame={onDebugAIFrame}

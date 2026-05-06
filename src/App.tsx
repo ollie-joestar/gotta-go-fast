@@ -102,6 +102,7 @@ export default function App() {
             onLapTime={handleLapTime}
             ghostData={ghostData ?? undefined}
             onDebugAIFrame={handleDebugAIFrame}
+            showCheckpoints={showAIDebug}
           />
         </Physics>
       </Canvas>
@@ -128,7 +129,7 @@ export default function App() {
           <div ref={posElRef}>x: 0.000  y: 0.000  z: 0.000</div>
           <div ref={quatElRef} style={{ color: "#aaddff" }}>qx: 0.0000  qy: 0.0000  qz: 0.0000  qw: 1.0000</div>
         </>}
-        <div style={{ marginTop: 4, color: "#666", fontSize: 10 }}>[h] debug  [p] ai frame</div>
+        <div style={{ marginTop: 4, color: "#666", fontSize: 10 }}>[h] debug  [p] ai frame  [b] bot</div>
       </div>
 
       <div style={{
