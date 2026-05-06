@@ -9,6 +9,7 @@ const REVERSE_THRESHOLD = CAR_OPTIONS.reverseThreshold;
 const MAX_STEER = CAR_OPTIONS.maxSteer;
 const MIN_STEER = CAR_OPTIONS.minSteer;
 const STEER_SPEED_MAX = CAR_OPTIONS.steerSpeedMax;
+const FRONT_STRAIGHT_BIAS = CAR_OPTIONS.frontStraightBias;
 
 export const useControls = (vehicleApi: any, chassisApi: any, enabled = true) => {
   const controls = useRef({
@@ -91,7 +92,7 @@ export const useControls = (vehicleApi: any, chassisApi: any, enabled = true) =>
     // Brake bias: when turning, unload front wheels (2,3) so they keep lateral grip.
     // Rears (0,1) absorb the braking load; fronts stay near-free to steer.
     const isTurning = left || right;
-    const frontBrake = isTurning ? BRAKE_FORCE * FBRAKE_BIAS : BRAKE_FORCE;
+    const frontBrake = isTurning ? BRAKE_FORCE * FBRAKE_BIAS : BRAKE_FORCE * FRONT_STRAIGHT_BIAS;
     const rearBrake = BRAKE_FORCE;
 
 
