@@ -16,6 +16,7 @@ import type { AIDebugFrame } from "./aiTypes"
 import * as THREE from "three"
 
 interface CarProps {
+  startPosition: [number, number, number]
   thirdPerson: boolean
   lapKey: number
   onSaveReady: (saveFn: (lapMs: number) => void) => void
@@ -30,10 +31,10 @@ interface CarProps {
   onDebugAIFrame?: (frame: AIDebugFrame) => void
 }
 
-export function Car({ thirdPerson, lapKey, onSaveReady, onDebugSpeed, onDebugTransform, onLapTime, lapStartTimeRef, currentCheckpoint = 0, isBot = false, checkpoints, onCheckpointTrigger, onDebugAIFrame }: CarProps) {
+export function Car({ startPosition, thirdPerson, lapKey, onSaveReady, onDebugSpeed, onDebugTransform, onLapTime, lapStartTimeRef, currentCheckpoint = 0, isBot = false, checkpoints, onCheckpointTrigger, onDebugAIFrame }: CarProps) {
   const { scene } = useGLTF("/models/car.glb")
   const size = CAR_OPTIONS.size
-  const position = CAR_START_POSITION
+  const position = startPosition
   const wheelRadius = CAR_OPTIONS.wheelRadius
   const chassisBodyArgs = size
 
@@ -149,7 +150,7 @@ export function Car({ thirdPerson, lapKey, onSaveReady, onDebugSpeed, onDebugTra
     }
 
     // AI debug frame — assembled each frame for both player and bot
-    if (onDebugAIFrame) {
+    if (onDebugAIFrame && CHECKPOINTS.length > 0) {
       const total = CHECKPOINTS.length
       const c0 = CHECKPOINTS[(currentCheckpoint + 0) % total]
       const c1 = CHECKPOINTS[(currentCheckpoint + 1) % total]

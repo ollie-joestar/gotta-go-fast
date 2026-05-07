@@ -1,48 +1,42 @@
-import { ColliderBox as CBox } from "./ColliderBox";
-import { TriggerBox } from "./TriggerBox";
+import { ColliderBox as CBox } from "./ColliderBox"
+
+// Direction legend (numpad layout):
+//   7 8 9
+//   4   6
+//   1 2 3
+//
+// Straights: 8/2 = N/S (walls on E+W), 4/6 = E/W (walls on N+S)
+// Corners:   7=NW(N+W), 9=NE(N+E), 1=SW(S+W), 3=SE(S+E)
+// Each corner label names the CLOSED sides; open sides connect to adjacent tiles.
 
 interface SegmentProps {
-  position: [number, number, number]
-  length: number
-  width: number
+  position: [number, number, number]  // tile centre (x, 0, z)
+  length: number                      // tile size (world units)
+  width: number                       // wall thickness (world units)
   height: number
-
-  checkpoint: string
   direction: number
-  start: boolean
 }
 
-export function Segment({ position, length, width, height, checkpoint, direction, start }: SegmentProps) {
-  const y = height / 2.0 as number;
+export function Segment({ position, length, width, height, direction }: SegmentProps) {
+  const cx = position[0]
+  const cz = position[2]
+  const y = height / 2
+  // Wall centres sit half a wall-width inward from the tile edge
+  const half = length / 2 - width / 2
 
-  let xOffset = 0.0 as number;
-  let zOffset = 0.0 as number;
-  let l = 0.0 as number;
-  let w = 0.0 as number;
+  // N/S walls run along Z (scale: W × H × L), E/W walls run along X (L × H × W)
+  const wallN = <CBox position={[cx, y, cz - half]} scale={[length, height, width]} color="gray" />
+  const wallS = <CBox position={[cx, y, cz + half]} scale={[length, height, width]} color="gray" />
+  const wallE = <CBox position={[cx + half, y, cz]} scale={[width, height, length]} color="gray" />
+  const wallW = <CBox position={[cx - half, y, cz]} scale={[width, height, length]} color="gray" />
 
-  if (direction == 8 || direction == 2) {
-    xOffset = (length - width) / 2.0 as number;
-    zOffset = 0.0 as number;
-    l = length as number;
-    w = width as number;
-  } else if (direction == 6 || direction == 4) {
-    xOffset = 0.0 as number;
-    zOffset = (length - width) / 2.0 as number;
-    l = width as number;
-    w = length as number;
+  switch (direction) {
+    case 8: case 2: return <>{wallE}{wallW}</>  // N/S straight
+    case 6: case 4: return <>{wallN}{wallS}</>  // E/W straight
+    case 7: return <>{wallN}{wallW}</>  // NW corner
+    case 9: return <>{wallN}{wallE}</>  // NE corner
+    case 1: return <>{wallS}{wallW}</>  // SW corner
+    case 3: return <>{wallS}{wallE}</>  // SE corner
+    default: return null
   }
-
-
-  return (
-    <>
-      <CBox position={[position[0] + xOffset, y, position[2] + zOffset]} scale={[l, height, w]} color="blue" />
-      <CBox position={[position[0] - xOffset, y, position[2] - zOffset]} scale={[l, height, w]} color="red" />
-      if (start == true) {
-        <TriggerBox
-          position={position}
-          scale={[l, height, w]}
-        />
-      }
-    </>
-  )
 }
