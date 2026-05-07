@@ -1,5 +1,5 @@
-import { ColliderBox as CBox } from "../ColliderBox";
-import { TriggerBox } from "../TriggerBox";
+import { ColliderBox as CBox } from "./ColliderBox";
+import { TriggerBox } from "./TriggerBox";
 
 interface SegmentProps {
   position: [number, number, number]
@@ -8,7 +8,7 @@ interface SegmentProps {
   height: number
 
   checkpoint: string
-  direction: string
+  direction: number
   start: boolean
 }
 
@@ -20,12 +20,12 @@ export function Segment({ position, length, width, height, checkpoint, direction
   let l = 0.0 as number;
   let w = 0.0 as number;
 
-  if (direction == "N" || direction == "S") {
+  if (direction == 8 || direction == 2) {
     xOffset = (length - width) / 2.0 as number;
     zOffset = 0.0 as number;
     l = length as number;
     w = width as number;
-  } else if (direction == "E" || direction == "W") {
+  } else if (direction == 6 || direction == 4) {
     xOffset = 0.0 as number;
     zOffset = (length - width) / 2.0 as number;
     l = width as number;
