@@ -23,6 +23,7 @@ function FPSCap({ fps = 60 }) {
 }
 import { Car } from "./Car"
 import { Ground } from "./Ground"
+import { Track } from "./Track"
 import { Colliders, CHECKPOINTS } from "./tracks/track01"
 import { Checkpoint } from "./Checkpoint"
 import { GhostRenderer } from "./GhostRenderer"
@@ -91,6 +92,7 @@ export function Scene({ onDebugSpeed, onDebugTransform, onLapTime, ghostData, on
       <Environment files="/textures/skybox_sky.hdr" background="both" />
       <PerspectiveCamera makeDefault position={[0, 7.5, 26]} fov={60} />
       {!thirdPerson && <OrbitControls />}
+      {/* <Track /> */}
       <Ground />
       <Colliders onTrigger={handleTrigger} cooldownRef={triggerCooldownRef} />
       {CHECKPOINTS.map((cp, i) => (
