@@ -120,6 +120,7 @@ export function Scene({ onDebugSpeed, onDebugTransform, onLapTime, ghostData, on
         shadow-bias={0.000}
         shadow-normalBias={0.1}
         shadow-intensity={1}
+        shadow-radius={5}
       />
       <Track onTrigger={handleTrigger} cooldownRef={triggerCooldownRef} onLoad={handleTrackLoad} />
       <Ground />
