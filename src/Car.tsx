@@ -9,7 +9,6 @@ import { useControls } from "./Controller"
 import { useBotController } from "./BotController"
 import { useFrame } from "@react-three/fiber"
 import { useGhostRecorder } from "./GhostRecorder"
-import { CHECKPOINTS, CAR_START_POSITION } from "./tracks/track01"
 import type { CheckpointDef } from "./tracks/track01"
 import { CAR_OPTIONS } from "./options"
 import type { AIDebugFrame } from "./aiTypes"
@@ -19,6 +18,7 @@ interface CarProps {
   startPosition: [number, number, number]
   thirdPerson: boolean
   lapKey: number
+  resetSignal?: number
   onSaveReady: (saveFn: (lapMs: number) => void) => void
   onDebugSpeed: (speed: number) => void
   onDebugTransform?: (pos: [number, number, number], quat: [number, number, number, number]) => void
@@ -31,7 +31,7 @@ interface CarProps {
   onDebugAIFrame?: (frame: AIDebugFrame) => void
 }
 
-export function Car({ startPosition, thirdPerson, lapKey, onSaveReady, onDebugSpeed, onDebugTransform, onLapTime, lapStartTimeRef, currentCheckpoint = 0, isBot = false, checkpoints, onCheckpointTrigger, onDebugAIFrame }: CarProps) {
+export function Car({ startPosition, thirdPerson, lapKey, resetSignal, onSaveReady, onDebugSpeed, onDebugTransform, onLapTime, lapStartTimeRef, currentCheckpoint = 0, isBot = false, checkpoints, onCheckpointTrigger, onDebugAIFrame }: CarProps) {
   const { scene } = useGLTF("/models/car.glb")
   const size = CAR_OPTIONS.size
   const position = startPosition
@@ -42,7 +42,7 @@ export function Car({ startPosition, thirdPerson, lapKey, onSaveReady, onDebugSp
   const visualRef = useRef<THREE.Group | null>(null)
 
   // Smoothed body position/quaternion — lerped each frame toward physics subscription
-  const smoothBodyPos = useRef(new THREE.Vector3(0, 1, 0))
+  const smoothBodyPos = useRef(new THREE.Vector3(...startPosition))
   const smoothBodyQuat = useRef(new THREE.Quaternion())
 
   // Which checkpoints the car is currently inside — prevents re-firing while overlapping
@@ -93,6 +93,17 @@ export function Car({ startPosition, thirdPerson, lapKey, onSaveReady, onDebugSp
     return () => { unsubVel(); unsubPos(); unsubQuat() }
   }, [chassisApi])
 
+  useEffect(() => {
+    if (!resetSignal) return
+    const [x, y, z] = startPosition
+    chassisApi.position.set(x, y, z)
+    chassisApi.velocity.set(0, 0, 0)
+    chassisApi.angularVelocity.set(0, 0, 0)
+    chassisApi.quaternion.set(0, 0, 0, 1)
+    smoothBodyPos.current.set(x, y, z)
+    smoothBodyQuat.current.set(0, 0, 0, 1)
+  }, [resetSignal])
+
   const [wheels, wheelInfos, wheelApis] = useWheels(
     size[0], size[1], size[2] / 2 - wheelRadius, wheelRadius
   )
@@ -120,7 +131,7 @@ export function Car({ startPosition, thirdPerson, lapKey, onSaveReady, onDebugSp
   )
 
   const { debugSpeed } = useControls(vehicleApi, chassisApi, !isBot)
-  useBotController({ vehicleApi, chassisApi, currentCheckpoint, allCheckpoints: CHECKPOINTS, enabled: isBot })
+  useBotController({ vehicleApi, chassisApi, currentCheckpoint, allCheckpoints: checkpoints ?? [], enabled: isBot })
 
   useEffect(() => {
     onDebugSpeed(debugSpeed)
@@ -150,11 +161,11 @@ export function Car({ startPosition, thirdPerson, lapKey, onSaveReady, onDebugSp
     }
 
     // AI debug frame — assembled each frame for both player and bot
-    if (onDebugAIFrame && CHECKPOINTS.length > 0) {
-      const total = CHECKPOINTS.length
-      const c0 = CHECKPOINTS[(currentCheckpoint + 0) % total]
-      const c1 = CHECKPOINTS[(currentCheckpoint + 1) % total]
-      const c2 = CHECKPOINTS[(currentCheckpoint + 2) % total]
+    if (onDebugAIFrame && checkpoints && checkpoints.length > 0) {
+      const total = checkpoints.length
+      const c0 = checkpoints[(currentCheckpoint + 0) % total]
+      const c1 = checkpoints[(currentCheckpoint + 1) % total]
+      const c2 = checkpoints[(currentCheckpoint + 2) % total]
       onDebugAIFrame({
         position: chassisPosRef.current,
         quaternion: chassisQuatRef.current,

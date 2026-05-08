@@ -24,7 +24,7 @@ function FPSCap({ fps = 60 }) {
 import { Car } from "./Car"
 import { Ground } from "./Ground"
 import { Track } from "./Track"
-import { CHECKPOINTS } from "./tracks/track01"
+import type { CheckpointDef } from "./tracks/track01"
 import { Checkpoint } from "./Checkpoint"
 import { GhostRenderer } from "./GhostRenderer"
 import type { GhostData } from "./DataTypes"
@@ -52,6 +52,7 @@ export function Scene({ onDebugSpeed, onDebugTransform, onLapTime, ghostData, on
   const triggerCooldownRef = useRef<number>(0)
   const [carStartPos, setCarStartPos] = useState<[number, number, number] | null>(null)
   const [resetKey, setResetKey] = useState<number>(0)
+  const [checkpoints, setCheckpoints] = useState<CheckpointDef[]>([])
 
   useEffect(() => {
     function keydownHandler(e: KeyboardEvent) {
@@ -89,28 +90,35 @@ export function Scene({ onDebugSpeed, onDebugTransform, onLapTime, ghostData, on
     saveRef.current = saveFn
   }, [])
 
+  const handleTrackLoad = useCallback((pos: [number, number, number], cps: CheckpointDef[]) => {
+    setCarStartPos(pos)
+    setCheckpoints(cps)
+  }, [])
+
   return (
     <Suspense fallback={null}>
       <FPSCap fps={60} />
       <Environment files="/textures/skybox_sky.hdr" background="both" />
       <PerspectiveCamera makeDefault position={[0, 7.5, 26]} fov={60} />
       {!thirdPerson && <OrbitControls />}
-      <Track onTrigger={handleTrigger} cooldownRef={triggerCooldownRef} onLoad={setCarStartPos} />
+      <Track onTrigger={handleTrigger} cooldownRef={triggerCooldownRef} onLoad={handleTrackLoad} />
       <Ground />
-      {CHECKPOINTS.map((cp, i) => (
+      {checkpoints.map((cp, i) => (
         <Checkpoint
           key={i}
           index={i}
           position={cp.position}
           size={cp.size}
+          visualSize={cp.visualSize}
+          rotation={cp.rotation}
           color={cp.color}
           visible={showCheckpoints}
         />
       ))}
       {carStartPos && (
         <Car
-          key={resetKey}
           startPosition={carStartPos}
+          resetSignal={resetKey}
           thirdPerson={thirdPerson}
           lapKey={lapKey}
           onSaveReady={handleSaveReady}
@@ -120,8 +128,8 @@ export function Scene({ onDebugSpeed, onDebugTransform, onLapTime, ghostData, on
           lapStartTimeRef={lapStartTime}
           currentCheckpoint={currentCheckpoint}
           isBot={isBot}
-          checkpoints={CHECKPOINTS}
-          onCheckpointTrigger={(idx) => setCurrentCheckpoint((idx + 1) % CHECKPOINTS.length)}
+          checkpoints={checkpoints}
+          onCheckpointTrigger={(idx) => setCurrentCheckpoint((idx + 1) % checkpoints.length)}
           onDebugAIFrame={onDebugAIFrame}
         />
       )}

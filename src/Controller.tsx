@@ -17,7 +17,6 @@ export const useControls = (vehicleApi: any, chassisApi: any, enabled = true) =>
     backward: false,
     left: false,
     right: false,
-    reset: false,
     handbrake: false,
   });
 
@@ -48,7 +47,6 @@ export const useControls = (vehicleApi: any, chassisApi: any, enabled = true) =>
         case "s": controls.current.backward = true; break;
         case "a": controls.current.left = true; break;
         case "d": controls.current.right = true; break;
-        case "r": controls.current.reset = true; break;
         case " ": controls.current.handbrake = true; break;
       }
     };
@@ -58,7 +56,6 @@ export const useControls = (vehicleApi: any, chassisApi: any, enabled = true) =>
         case "s": controls.current.backward = false; break;
         case "a": controls.current.left = false; break;
         case "d": controls.current.right = false; break;
-        case "r": controls.current.reset = false; break;
         case " ": controls.current.handbrake = false; break;
       }
     };
@@ -73,7 +70,7 @@ export const useControls = (vehicleApi: any, chassisApi: any, enabled = true) =>
   // Physics loop — runs every frame, always has fresh velocity/quaternion
   useFrame(() => {
     if (!enabled) return;
-    const { forward, backward, left, right, reset, handbrake } = controls.current;
+    const { forward, backward, left, right, handbrake } = controls.current;
 
     // --- Compute forward speed along car's local axis ---
     const [qx, qy, qz, qw] = quaternion.current;
@@ -123,7 +120,6 @@ export const useControls = (vehicleApi: any, chassisApi: any, enabled = true) =>
         vehicleApi.setBrake(frontBrake, 2);
         vehicleApi.setBrake(frontBrake, 3);
       } else {
-        // Stopped or reversing → reverse
         vehicleApi.setBrake(0, 0);
         vehicleApi.setBrake(0, 1);
         vehicleApi.setBrake(0, 2);
@@ -182,13 +178,6 @@ export const useControls = (vehicleApi: any, chassisApi: any, enabled = true) =>
       vehicleApi.setSteeringValue(0, 3);
     }
 
-    // --- Reset ---
-    if (reset) {
-      chassisApi.position.set(0, 1, 0);
-      chassisApi.velocity.set(0, 0, 0);
-      chassisApi.angularVelocity.set(0, 0, 0);
-      chassisApi.rotation.set(0, 0, 0);
-    }
   });
 
   return { controls, debugSpeed };

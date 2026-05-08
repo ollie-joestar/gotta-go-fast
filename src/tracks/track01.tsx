@@ -4,7 +4,9 @@ export const VERSION = 1.0
 
 export interface CheckpointDef {
   position: [number, number, number]
-  size: [number, number, number]
+  size: [number, number, number]        // AABB used for collision detection
+  visualSize?: [number, number, number] // geometry shown in debug view (defaults to size)
+  rotation?: [number, number, number]   // Euler Y rotation for visual only (corners)
   color?: string
 }
 
