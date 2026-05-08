@@ -184,6 +184,8 @@ export function useBotController({
         vehicleApi.applyEngineForce(0, i)
       }
       const coastBrake = Math.abs(fSpeed) > 0.15 ? CAR_OPTIONS.coastBrakeForce : 0
+      vehicleApi.setBrake(coastBrake, 0);
+      vehicleApi.setBrake(coastBrake, 1);
       if (turning) {
         vehicleApi.setBrake(0, 2)
         vehicleApi.setBrake(0, 3)

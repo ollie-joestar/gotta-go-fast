@@ -52,8 +52,8 @@ export const CAR_OPTIONS = {
   cameraHeight: 5,
   cameraLookAhead: 4,      // how far ahead of the car the camera looks (m)
   cameraYawLerp: 0.07,     // how fast camera heading follows car heading (arcade swing feel)
-  cameraFovBase: 40,
-  cameraFovMax: 65,
+  cameraFovBase: 35,
+  cameraFovMax: 55,
   cameraFovSpeedMax: 50,   // speed (m/s) at which FOV reaches max
   cameraFovLerp: 0.24,     // FOV transition smoothness
   visualLerpFactor: 0.50,

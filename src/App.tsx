@@ -90,7 +90,7 @@ export default function App() {
   return (
     <div style={{ position: "relative", width: "100vw", height: "100vh" }}>
 
-      <Canvas frameloop="demand">
+      <Canvas frameloop="demand" shadows="soft">
         <Physics
           gravity={[0, -9.81, 0]}
           defaultContactMaterial={{ friction: 1.0, restitution: 0 }}

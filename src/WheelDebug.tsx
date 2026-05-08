@@ -14,7 +14,9 @@ export const WheelDebug = ({ radius, wheelRef }: WheelDebugProps) => {
   const wheelWidth = 0.33 as const; // wheel width
   return (
     <group ref={wheelRef}>
-      <mesh rotation={[0, 0, Math.PI / 2]}>
+      <mesh rotation={[0, 0, Math.PI / 2]}
+        castShadow
+      >
         <cylinderGeometry args={[radius, radius, wheelWidth, 16]} />
         <meshBasicMaterial transparent wireframe opacity={0.2} color="white" />
       </mesh>
