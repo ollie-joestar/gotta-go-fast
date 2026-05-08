@@ -1,4 +1,4 @@
-import { ColliderBox as CBox } from "./ColliderBox"
+import { ContainerWall } from "./ContainerWall"
 
 // Direction legend (numpad layout):
 //   7 8 9
@@ -23,12 +23,13 @@ export function Segment({ position, length, width, height, direction }: SegmentP
   const y = height / 2
   // Wall centres sit half a wall-width inward from the tile edge
   const half = length / 2 - width / 2
+  const wallLength = length - (2 * width) // wall length is tile length minus 2 wall thicknesses, so walls don't overlap at corners
 
-  // N/S walls run along Z (scale: W × H × L), E/W walls run along X (L × H × W)
-  const wallN = <CBox position={[cx, y, cz - half]} scale={[length, height, width]} color="gray" />
-  const wallS = <CBox position={[cx, y, cz + half]} scale={[length, height, width]} color="gray" />
-  const wallE = <CBox position={[cx + half, y, cz]} scale={[width, height, length]} color="gray" />
-  const wallW = <CBox position={[cx - half, y, cz]} scale={[width, height, length]} color="gray" />
+  // N/S walls run along X axis; E/W walls run along Z axis
+  const wallN = <ContainerWall position={[cx, y, cz - half]} wallLength={length} wallHeight={height} wallDepth={width} runningAxis="x" />
+  const wallS = <ContainerWall position={[cx, y, cz + half]} wallLength={length} wallHeight={height} wallDepth={width} runningAxis="x" />
+  const wallE = <ContainerWall position={[cx + half, y, cz]} wallLength={length} wallHeight={height} wallDepth={width} runningAxis="z" />
+  const wallW = <ContainerWall position={[cx - half, y, cz]} wallLength={length} wallHeight={height} wallDepth={width} runningAxis="z" />
 
   switch (direction) {
     case 8: case 2: return <>{wallE}{wallW}</>  // N/S straight

@@ -39,6 +39,7 @@ export function Ground() {
         {...textures}
         displacementScale={0.03}
         normalScale={new THREE.Vector2(1, 1)}
+        color={new THREE.Color(0.2, 0.2, 0.2)}
 
         roughness={0.7}
         metalness={0.3}
