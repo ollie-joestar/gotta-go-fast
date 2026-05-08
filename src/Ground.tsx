@@ -3,6 +3,10 @@ import { useTexture } from "@react-three/drei";
 import { useMemo } from "react";
 import * as THREE from "three";
 
+const GROUND_NORMAL_SCALE = 0.3   // bump intensity — lower = flatter, 0 = completely flat
+const GROUND_ROUGHNESS    = 1.0   // 0 = mirror, 1 = fully matte
+const GROUND_METALNESS    = 0.0   // 0 = dielectric, 1 = metallic
+
 export function Ground() {
   const [ref] = usePlane(() => ({
     type: "Static",
@@ -38,11 +42,13 @@ export function Ground() {
       <meshStandardMaterial
         {...textures}
         displacementScale={0.03}
-        normalScale={new THREE.Vector2(1, 1)}
-        color={new THREE.Color(0.2, 0.2, 0.2)}
+        normalScale={new THREE.Vector2(GROUND_NORMAL_SCALE, GROUND_NORMAL_SCALE)}
+        roughnessMap={null}
+        color={new THREE.Color(0.1, 0.1, 0.1)}
 
-        roughness={0.7}
-        metalness={0.3}
+        roughness={GROUND_ROUGHNESS}
+        metalness={GROUND_METALNESS}
+        envMapIntensity={0}
       // roughness={0}
       // metalness={1}
       />

@@ -38,6 +38,15 @@ export function Car({ startPosition, thirdPerson, lapKey, resetSignal, onSaveRea
   const wheelRadius = CAR_OPTIONS.wheelRadius
   const chassisBodyArgs = size
 
+  useEffect(() => {
+    scene.traverse(child => {
+      if (child instanceof THREE.Mesh) {
+        child.castShadow = true
+        child.receiveShadow = true
+      }
+    })
+  }, [scene])
+
   const chassisRef = useRef<THREE.Mesh | null>(null)
   const visualRef = useRef<THREE.Group | null>(null)
 

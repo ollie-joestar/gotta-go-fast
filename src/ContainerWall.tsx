@@ -128,6 +128,11 @@ export function ContainerWall({
 
   return (
     <group position={position} rotation={[0, rotY, 0]}>
+      {/* Single shadow caster for the whole wall — invisible to camera */}
+      <mesh castShadow>
+        <boxGeometry args={[wallLength, wallHeight, wallDepth]} />
+        <meshBasicMaterial colorWrite={false} depthWrite={false} />
+      </mesh>
       {Array.from({ length: rows }, (_, row) =>
         Array.from({ length: cols }, (_, col) => {
           const x = (col - cols / 2 + 0.5) * cLen
@@ -148,6 +153,7 @@ export function ContainerWall({
                 metalnessMap={ormMap}
                 roughness={1}
                 metalness={1}
+                side={THREE.FrontSide}
               />
             </mesh>
           )

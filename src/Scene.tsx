@@ -43,6 +43,7 @@ interface SceneProps {
 export function Scene({ onDebugSpeed, onDebugTransform, onLapTime, ghostData, onDebugAIFrame, showCheckpoints = false }: SceneProps) {
   const [thirdPerson, setThirdPerson] = useState<boolean>(true)
   const [isBot, setIsBot] = useState<boolean>(false)
+  const [shadowsEnabled, setShadowsEnabled] = useState<boolean>(false)
   const [lapKey, setLapKey] = useState<number>(0)
   const lapKeyRef = useRef<number>(0)
   const [currentCheckpoint, setCurrentCheckpoint] = useState<number>(0)
@@ -58,6 +59,7 @@ export function Scene({ onDebugSpeed, onDebugTransform, onLapTime, ghostData, on
     function keydownHandler(e: KeyboardEvent) {
       if (e.key === "c") setThirdPerson(prev => !prev)
       if (e.key === "b") setIsBot(prev => !prev)
+      if (e.key === "u") setShadowsEnabled(prev => !prev)
       if (e.key === "r") {
         lapKeyRef.current = 0
         setLapKey(0)
@@ -101,6 +103,24 @@ export function Scene({ onDebugSpeed, onDebugTransform, onLapTime, ghostData, on
       <Environment files="/textures/skybox_sky.hdr" background="both" />
       <PerspectiveCamera makeDefault position={[0, 7.5, 26]} fov={60} />
       {!thirdPerson && <OrbitControls />}
+      <ambientLight color="#ff9a3c" intensity={0.55} />
+      <directionalLight
+        position={[500, 120, 200]}
+        color="#ffb347"
+        intensity={20.0}
+        castShadow={shadowsEnabled}
+        shadow-mapSize-width={4096}
+        shadow-mapSize-height={4096}
+        shadow-camera-near={1}
+        shadow-camera-far={1200}
+        shadow-camera-left={-350}
+        shadow-camera-right={350}
+        shadow-camera-top={350}
+        shadow-camera-bottom={-350}
+        shadow-bias={0.000}
+        shadow-normalBias={0.1}
+        shadow-intensity={1}
+      />
       <Track onTrigger={handleTrigger} cooldownRef={triggerCooldownRef} onLoad={handleTrackLoad} />
       <Ground />
       {checkpoints.map((cp, i) => (
