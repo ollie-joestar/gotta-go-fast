@@ -26,10 +26,42 @@ export function Segment({ position, length, width, height, direction }: SegmentP
   const wallLength = length - (2 * width) // wall length is tile length minus 2 wall thicknesses, so walls don't overlap at corners
 
   // N/S walls run along X axis; E/W walls run along Z axis
-  const wallN = <ContainerWall position={[cx, y, cz - half]} wallLength={length} wallHeight={height} wallDepth={width} runningAxis="x" />
-  const wallS = <ContainerWall position={[cx, y, cz + half]} wallLength={length} wallHeight={height} wallDepth={width} runningAxis="x" />
-  const wallE = <ContainerWall position={[cx + half, y, cz]} wallLength={length} wallHeight={height} wallDepth={width} runningAxis="z" />
-  const wallW = <ContainerWall position={[cx - half, y, cz]} wallLength={length} wallHeight={height} wallDepth={width} runningAxis="z" />
+  const wallN = <ContainerWall
+    position={[cx, y, cz - half]}
+    wallLength={length}
+    wallHeight={height}
+    wallDepth={width}
+    runningAxis="x"
+    cols={length / 12}
+    rows={height / 5}
+  />
+  const wallS = <ContainerWall
+    position={[cx, y, cz + half]}
+    wallLength={length}
+    wallHeight={height}
+    wallDepth={width}
+    runningAxis="x"
+    cols={length / 12}
+    rows={height / 5}
+  />
+  const wallE = <ContainerWall
+    position={[cx + half, y, cz]}
+    wallLength={length}
+    wallHeight={height}
+    wallDepth={width}
+    runningAxis="z"
+    cols={length / 12}
+    rows={height / 5}
+  />
+  const wallW = <ContainerWall
+    position={[cx - half, y, cz]}
+    wallLength={length}
+    wallHeight={height}
+    wallDepth={width}
+    runningAxis="z"
+    cols={length / 12}
+    rows={height / 5}
+  />
 
   switch (direction) {
     case 8: case 2: return <>{wallE}{wallW}</>  // N/S straight
