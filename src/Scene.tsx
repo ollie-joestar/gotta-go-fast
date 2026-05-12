@@ -34,13 +34,15 @@ interface SceneProps {
   onDebugSpeed: (speed: number) => void
   onDebugTransform?: (pos: [number, number, number], quat: [number, number, number, number]) => void
   onLapTime?: (ms: number) => void
+  onLapChange?: (currentLap: number, totalLaps: number) => void
+  onRaceFinished?: () => void
   ghostData?: GhostData
   onDebugAIFrame?: (frame: AIDebugFrame) => void
   showCheckpoints?: boolean
 }
 
 // Scene.tsx
-export function Scene({ onDebugSpeed, onDebugTransform, onLapTime, ghostData, onDebugAIFrame, showCheckpoints = false }: SceneProps) {
+export function Scene({ onDebugSpeed, onDebugTransform, onLapTime, onLapChange, onRaceFinished, ghostData, onDebugAIFrame, showCheckpoints = false }: SceneProps) {
   const [thirdPerson, setThirdPerson] = useState<boolean>(true)
   const [isBot, setIsBot] = useState<boolean>(false)
   const [shadowsEnabled, setShadowsEnabled] = useState<boolean>(false)
@@ -54,6 +56,17 @@ export function Scene({ onDebugSpeed, onDebugTransform, onLapTime, ghostData, on
   const [carStartPos, setCarStartPos] = useState<[number, number, number] | null>(null)
   const [resetKey, setResetKey] = useState<number>(0)
   const [checkpoints, setCheckpoints] = useState<CheckpointDef[]>([])
+  const checkpointsRef = useRef<CheckpointDef[]>([])
+  const totalLapsRef = useRef<number>(1)
+  // Tracks the next checkpoint index the car must hit (1..N-1 in order; N means all done)
+  const nextCheckpointRef = useRef<number>(0)
+  const [raceFinished, setRaceFinished] = useState(false)
+
+  // Stable refs for callbacks so handleTrigger (useCallback []) can always call latest version
+  const onLapChangeRef = useRef(onLapChange)
+  const onRaceFinishedRef = useRef(onRaceFinished)
+  useEffect(() => { onLapChangeRef.current = onLapChange }, [onLapChange])
+  useEffect(() => { onRaceFinishedRef.current = onRaceFinished }, [onRaceFinished])
 
   useEffect(() => {
     function keydownHandler(e: KeyboardEvent) {
@@ -67,6 +80,9 @@ export function Scene({ onDebugSpeed, onDebugTransform, onLapTime, ghostData, on
         triggerCooldownRef.current = 0
         setCurrentCheckpoint(0)
         setResetKey(k => k + 1)
+        nextCheckpointRef.current = 0
+        setRaceFinished(false)
+        onLapChangeRef.current?.(0, totalLapsRef.current)
         console.log("Recording reset via 'r'")
       }
     }
@@ -76,15 +92,34 @@ export function Scene({ onDebugSpeed, onDebugTransform, onLapTime, ghostData, on
 
   const handleTrigger = useCallback(() => {
     const now = Date.now()
-    setGhostStartSignal(s => s + 1)
+    const cps = checkpointsRef.current
+
+    if (lapKeyRef.current > 0) {
+      // Require all checkpoints 1..N-1 to have been hit in order
+      if (nextCheckpointRef.current < cps.length) return
+      nextCheckpointRef.current = 1
+    } else {
+      nextCheckpointRef.current = 1
+    }
+
     if (lapKeyRef.current > 0 && lapStartTime.current !== null) {
       const lapMs = now - lapStartTime.current
       console.log("Lap finished, ms:", lapMs)
       saveRef.current?.(lapMs)
+
+      // Check if all laps are done (lapKeyRef still holds lap number that just finished)
+      if (lapKeyRef.current >= totalLapsRef.current) {
+        setRaceFinished(true)
+        onRaceFinishedRef.current?.()
+        return
+      }
     }
+
+    setGhostStartSignal(s => s + 1)
     lapKeyRef.current += 1
     setLapKey(lapKeyRef.current)
     lapStartTime.current = now
+    onLapChangeRef.current?.(lapKeyRef.current, totalLapsRef.current)
     console.log("Lap started/restarted, lapKey:", lapKeyRef.current)
   }, [])
 
@@ -92,7 +127,9 @@ export function Scene({ onDebugSpeed, onDebugTransform, onLapTime, ghostData, on
     saveRef.current = saveFn
   }, [])
 
-  const handleTrackLoad = useCallback((pos: [number, number, number], cps: CheckpointDef[]) => {
+  const handleTrackLoad = useCallback((pos: [number, number, number], cps: CheckpointDef[], laps: number) => {
+    checkpointsRef.current = cps
+    totalLapsRef.current = laps
     setCarStartPos(pos)
     setCheckpoints(cps)
   }, [])
@@ -150,7 +187,12 @@ export function Scene({ onDebugSpeed, onDebugTransform, onLapTime, ghostData, on
           currentCheckpoint={currentCheckpoint}
           isBot={isBot}
           checkpoints={checkpoints}
-          onCheckpointTrigger={(idx) => setCurrentCheckpoint((idx + 1) % checkpoints.length)}
+          disabled={raceFinished}
+          onCheckpointTrigger={(idx) => {
+            if (idx !== nextCheckpointRef.current) return
+            nextCheckpointRef.current = idx + 1  // advances to N when idx = N-1 (signals all done)
+            setCurrentCheckpoint((idx + 1) % checkpoints.length)
+          }}
           onDebugAIFrame={onDebugAIFrame}
         />
       )}

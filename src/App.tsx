@@ -35,6 +35,8 @@ export default function App() {
   const [showDebug, setShowDebug] = useState(false)
   const [showAIDebug, setShowAIDebug] = useState(false)
   const [ghostData, setGhostData] = useState<GhostData | null>(null)
+  const [lapInfo, setLapInfo] = useState<{ current: number; total: number } | null>(null)
+  const [raceFinished, setRaceFinished] = useState(false)
 
   // DOM refs for imperative updates — avoids React state for per-frame values
   // which would cause 60 re-renders/sec and break canvas frameloop="demand"
@@ -63,10 +65,27 @@ export default function App() {
     if (aiDebugElRef.current) aiDebugElRef.current.textContent = fmtAIDebug(frame)
   }, [])
 
+  const handleLapChange = useCallback((current: number, total: number) => {
+    if (current === 0) {
+      setLapInfo(null)
+      setRaceFinished(false)
+    } else {
+      setLapInfo({ current, total })
+    }
+  }, [])
+
+  const handleRaceFinished = useCallback(() => {
+    setRaceFinished(true)
+  }, [])
+
   useEffect(() => {
     function handler(e: KeyboardEvent) {
       if (e.key === "h") setShowDebug(v => !v)
       if (e.key === "p") setShowAIDebug(v => !v)
+      if (e.key === "r") {
+        setLapInfo(null)
+        setRaceFinished(false)
+      }
     }
     window.addEventListener("keydown", handler)
     return () => window.removeEventListener("keydown", handler)
@@ -100,6 +119,8 @@ export default function App() {
             onDebugSpeed={handleDebugSpeed}
             onDebugTransform={handleTransform}
             onLapTime={handleLapTime}
+            onLapChange={handleLapChange}
+            onRaceFinished={handleRaceFinished}
             ghostData={ghostData ?? undefined}
             onDebugAIFrame={handleDebugAIFrame}
             showCheckpoints={showAIDebug}
@@ -124,6 +145,11 @@ export default function App() {
         <div ref={lapTimeElRef} style={{ color: "#ffdd44", fontWeight: "bold", fontSize: 15, marginBottom: 2 }}>
           0:00.00
         </div>
+        {lapInfo && (
+          <div style={{ color: "#ffffff", fontWeight: "bold", fontSize: 14, marginBottom: 2, letterSpacing: 1 }}>
+            LAP {lapInfo.current}/{lapInfo.total}
+          </div>
+        )}
         {showDebug && <>
           <div ref={speedElRef}>speed: 0.00</div>
           <div ref={posElRef}>x: 0.000  y: 0.000  z: 0.000</div>
@@ -186,6 +212,34 @@ export default function App() {
         )}
         <div style={{ color: "#666", fontSize: 10 }}>[p] ai frame</div>
       </div>
+
+      {/* FINISH overlay */}
+      {raceFinished && (
+        <div style={{
+          position: "absolute",
+          inset: 0,
+          display: "flex",
+          flexDirection: "column",
+          alignItems: "center",
+          justifyContent: "center",
+          background: "rgba(0,0,0,0.65)",
+          pointerEvents: "none",
+        }}>
+          <div style={{
+            color: "#ffdd44",
+            fontSize: 100,
+            fontFamily: "monospace",
+            fontWeight: "bold",
+            letterSpacing: 12,
+            textShadow: "0 0 60px #ffaa00, 0 0 20px #ff6600",
+          }}>
+            FINISH
+          </div>
+          <div style={{ color: "#aaa", fontFamily: "monospace", fontSize: 14, marginTop: 16 }}>
+            press [r] to restart
+          </div>
+        </div>
+      )}
     </div>
   )
 }

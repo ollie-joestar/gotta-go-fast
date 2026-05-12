@@ -19,6 +19,7 @@ interface CarProps {
   thirdPerson: boolean
   lapKey: number
   resetSignal?: number
+  disabled?: boolean
   onSaveReady: (saveFn: (lapMs: number) => void) => void
   onDebugSpeed: (speed: number) => void
   onDebugTransform?: (pos: [number, number, number], quat: [number, number, number, number]) => void
@@ -31,7 +32,7 @@ interface CarProps {
   onDebugAIFrame?: (frame: AIDebugFrame) => void
 }
 
-export function Car({ startPosition, thirdPerson, lapKey, resetSignal, onSaveReady, onDebugSpeed, onDebugTransform, onLapTime, lapStartTimeRef, currentCheckpoint = 0, isBot = false, checkpoints, onCheckpointTrigger, onDebugAIFrame }: CarProps) {
+export function Car({ startPosition, thirdPerson, lapKey, resetSignal, disabled = false, onSaveReady, onDebugSpeed, onDebugTransform, onLapTime, lapStartTimeRef, currentCheckpoint = 0, isBot = false, checkpoints, onCheckpointTrigger, onDebugAIFrame }: CarProps) {
   const { scene } = useGLTF("/models/car.glb")
   const size = CAR_OPTIONS.size
   const position = startPosition
@@ -139,8 +140,16 @@ export function Car({ startPosition, thirdPerson, lapKey, resetSignal, onSaveRea
     vehicleRef
   )
 
-  const { debugSpeed } = useControls(vehicleApi, chassisApi, !isBot)
-  useBotController({ vehicleApi, chassisApi, currentCheckpoint, allCheckpoints: checkpoints ?? [], enabled: isBot })
+  const { debugSpeed } = useControls(vehicleApi, chassisApi, !isBot && !disabled)
+  useBotController({ vehicleApi, chassisApi, currentCheckpoint, allCheckpoints: checkpoints ?? [], enabled: isBot && !disabled })
+
+  useEffect(() => {
+    if (!disabled) return
+    for (let i = 0; i < 4; i++) {
+      vehicleApi.applyEngineForce(0, i)
+      vehicleApi.setBrake(CAR_OPTIONS.brakeForce * 3, i)
+    }
+  }, [disabled])
 
   useEffect(() => {
     onDebugSpeed(debugSpeed)
