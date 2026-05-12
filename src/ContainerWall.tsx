@@ -4,19 +4,20 @@ import { useMemo } from "react"
 import * as THREE from "three"
 
 const COLOR_PATHS = [
-  '/textures/container/Container_Material_BaseColor_blue.png',
-  '/textures/container/Container_Material_BaseColor_cyan.png',
-  '/textures/container/Container_Material_BaseColor_green.png',
-  '/textures/container/Container_Material_BaseColor_grey.png',
-  '/textures/container/Container_Material_BaseColor_pink.png',
-  '/textures/container/Container_Material_BaseColor_purple.png',
-  '/textures/container/Container_Material_BaseColor_red.png',
-  '/textures/container/Container_Material_BaseColor_white.png',
-  '/textures/container/Container_Material_BaseColor_yellow.png',
+  '/textures/container/Container_Material_BaseColor_blue_smol.png',
+  '/textures/container/Container_Material_BaseColor_cyan_smol.png',
+  '/textures/container/Container_Material_BaseColor_green_smol.png',
+  '/textures/container/Container_Material_BaseColor_grey_smol.png',
+  '/textures/container/Container_Material_BaseColor_pink_smol.png',
+  '/textures/container/Container_Material_BaseColor_purple_smol.png',
+  '/textures/container/Container_Material_BaseColor_red_smol.png',
+  '/textures/container/Container_Material_BaseColor_white_smol.png',
+  '/textures/container/Container_Material_BaseColor_yellow_smol.png',
 ]
 
 // Start loading the model before any component mounts
-useGLTF.preload('/models/ContainerTextureless.glb')
+// useGLTF.preload('/models/ContainerTextureless.glb')
+useGLTF.preload('/models/ContainerTextureless2.glb')
 
 interface ContainerWallProps {
   position: [number, number, number]
@@ -48,7 +49,8 @@ export function ContainerWall({
     type: 'Static',
   }))
 
-  const { scene } = useGLTF('/models/ContainerTextureless.glb')
+  // const { scene } = useGLTF('/models/ContainerTextureless.glb')
+  const { scene } = useGLTF('/models/ContainerTextureless2.glb')
 
   // useTexture defaults to flipY=true, but GLTF geometry has V already flipped (v = 1-v),
   // so we must set flipY=false to match. Color maps are sRGB; normal/ORM are linear.
@@ -70,7 +72,7 @@ export function ContainerWall({
     normalMap.needsUpdate = true
   }, [normalMap])
 
-  const ormMap = useTexture('/textures/container/Container_Material_OcclusionRoughnessMetallic.png') as THREE.Texture
+  const ormMap = useTexture('/textures/container/Container_Material_OcclusionRoughnessMetallic_smol.png') as THREE.Texture
   useMemo(() => {
     ormMap.flipY = false
     ormMap.colorSpace = THREE.LinearSRGBColorSpace
