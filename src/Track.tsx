@@ -7,13 +7,14 @@ import type { CheckpointDef } from "./tracks/track01"
 interface TrackProps {
   onTrigger?: () => void
   cooldownRef?: MutableRefObject<number>
-  onLoad?: (carStartPos: [number, number, number], checkpoints: CheckpointDef[]) => void
+  onLoad?: (carStartPos: [number, number, number], checkpoints: CheckpointDef[], laps: number) => void
 }
 
 interface TrackData {
   length: number
   width: number
   height: number
+  laps: number
   startRow: number
   startCol: number
   grid: number[][]
@@ -21,14 +22,15 @@ interface TrackData {
 
 function parseTrack(text: string): TrackData {
   const lines = text.split('\n').map(l => l.trim())
-  let length = 64, width = 4, height = 10
+  let length = 64, width = 4, height = 10, laps = 1
   let startRow = 0, startCol = 0
   const gridLines: string[] = []
 
   for (const line of lines) {
-    if      (line.startsWith('length =')) length = parseInt(line.split('=')[1].trim())
-    else if (line.startsWith('width ='))  width  = parseInt(line.split('=')[1].trim())
+    if (line.startsWith('length =')) length = parseInt(line.split('=')[1].trim())
+    else if (line.startsWith('width =')) width = parseInt(line.split('=')[1].trim())
     else if (line.startsWith('height =')) height = parseInt(line.split('=')[1].trim())
+    else if (line.startsWith('laps =')) laps = parseInt(line.split('=')[1].trim())
     else if (line.startsWith('start =')) {
       const m = line.match(/\[(\d+),\s*(\d+)\]/)
       if (m) { startRow = parseInt(m[1]); startCol = parseInt(m[2]) }
@@ -38,7 +40,7 @@ function parseTrack(text: string): TrackData {
   }
 
   const grid = gridLines.map(l => l.split('').map(Number))
-  return { length, width, height, startRow, startCol, grid }
+  return { length, width, height, laps, startRow, startCol, grid }
 }
 
 // ─── path-tracing helpers ────────────────────────────────────────────────────
@@ -85,8 +87,8 @@ const CP_COLORS = [
 
 function buildCheckpoints(data: TrackData): CheckpointDef[] {
   const { grid, startRow, startCol, length: L, width: W, height: H } = data
-  const roadW = L - 2 * W  // drivable gap between walls
-  const thin  = W           // checkpoint slab thickness (same as wall width)
+  const roadW = L - W  // drivable gap between walls
+  const thin = W           // checkpoint slab thickness (same as wall width)
 
   const checkpoints: CheckpointDef[] = []
   let row = startRow, col = startCol
@@ -104,7 +106,7 @@ function buildCheckpoints(data: TrackData): CheckpointDef[] {
       // Straight: thin perpendicular slab
       cp = {
         position: [cx, H / 2, cz],
-        size:     isNS ? [roadW, H, thin] : [thin, H, roadW],
+        size: isNS ? [roadW, H, thin] : [thin, H, roadW],
         color,
       }
     } else {
@@ -112,10 +114,10 @@ function buildCheckpoints(data: TrackData): CheckpointDef[] {
       // The AABB covers the full road square; visual is a rotated thin slab.
       const rotY = (cellDir === 7 || cellDir === 3) ? -Math.PI / 4 : Math.PI / 4
       cp = {
-        position:   [cx, H / 2, cz],
-        size:       [roadW, H, roadW],               // AABB for car detection
+        position: [cx, H / 2, cz],
+        size: [roadW, H, roadW],               // AABB for car detection
         visualSize: [roadW * Math.SQRT2, H, thin],   // diagonal slab for debug view
-        rotation:   [0, rotY, 0],
+        rotation: [0, rotY, 0],
         color,
       }
     }
@@ -123,7 +125,7 @@ function buildCheckpoints(data: TrackData): CheckpointDef[] {
     checkpoints.push(cp)
 
     const exit = exitDir(cellDir, travel)
-    ;[row, col] = stepCell(row, col, exit)
+      ;[row, col] = stepCell(row, col, exit)
     travel = exit
   } while (row !== startRow || col !== startCol)
 
@@ -136,10 +138,10 @@ function carStartFromData(data: TrackData): [number, number, number] {
   const dir = data.grid[data.startRow]?.[data.startCol] ?? 8
   const half = data.length / 2
   switch (dir) {
-    case 8: return [0, 1,  half]   // going N → spawn south (+Z)
+    case 8: return [0, 1, half]   // going N → spawn south (+Z)
     case 2: return [0, 1, -half]   // going S → spawn north (-Z)
     case 6: return [-half, 1, 0]   // going E → spawn west  (-X)
-    case 4: return [ half, 1, 0]   // going W → spawn east  (+X)
+    case 4: return [half, 1, 0]   // going W → spawn east  (+X)
     default: return [0, 1, half]
   }
 }
@@ -159,7 +161,7 @@ export function Track({ onTrigger, cooldownRef, onLoad }: TrackProps) {
       .then(text => {
         const parsed = parseTrack(text)
         setData(parsed)
-        onLoad?.(carStartFromData(parsed), buildCheckpoints(parsed))
+        onLoad?.(carStartFromData(parsed), buildCheckpoints(parsed), parsed.laps)
       })
   }, [])
 
