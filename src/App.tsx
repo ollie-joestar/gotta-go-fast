@@ -119,10 +119,13 @@ export default function App() {
     reader.readAsText(file)
   }, [])
 
+  const isLinux = navigator.userAgent.includes('Linux') && !navigator.userAgent.includes('Android')
+  const dpr = isLinux ? Math.min(window.devicePixelRatio, 600 / window.innerHeight) : window.devicePixelRatio
+
   return (
     <div style={{ position: "relative", width: "100vw", height: "100vh" }}>
 
-      <Canvas frameloop="demand" shadows="soft">
+      <Canvas frameloop="demand" shadows="soft" dpr={dpr}>
         <Physics
           gravity={[0, -9.81, 0]}
           defaultContactMaterial={{ friction: 1.0, restitution: 0 }}
