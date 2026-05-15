@@ -67,5 +67,13 @@ export function useMultiplayer() {
     m.setState("lap", lap)
   }, [])
 
-  return { remotePlayers, broadcast }
+  // Broadcast race-finish state; pass false to clear it on restart
+  const broadcastFinished = useCallback((finished: boolean) => {
+    if (!connectedRef.current) return
+    const m = me()
+    if (!m) return
+    m.setState("finished", finished)
+  }, [])
+
+  return { remotePlayers, broadcast, broadcastFinished }
 }

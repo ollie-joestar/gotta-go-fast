@@ -37,7 +37,7 @@ interface SceneProps {
   onDebugTransform?: (pos: [number, number, number], quat: [number, number, number, number]) => void
   onLapTime?: (ms: number) => void
   onLapChange?: (currentLap: number, totalLaps: number) => void
-  onRaceFinished?: () => void
+  onRaceFinished?: (won: boolean) => void
   ghostData?: GhostData
   onDebugAIFrame?: (frame: AIDebugFrame) => void
   showCheckpoints?: boolean
@@ -66,11 +66,17 @@ export function Scene({ onDebugSpeed, onDebugTransform, onLapTime, onLapChange, 
   const nextCheckpointRef = useRef<number>(0)
   const [raceFinished, setRaceFinished] = useState(false)
 
-  const { remotePlayers, broadcast } = useMultiplayer()
+  const { remotePlayers, broadcast, broadcastFinished } = useMultiplayer()
 
   useEffect(() => {
     onPlayerCount?.(remotePlayers.length)
   }, [remotePlayers.length, onPlayerCount])
+
+  // Refs so handleTrigger (useCallback []) can always read the latest values
+  const remotePlayersRef = useRef(remotePlayers)
+  useEffect(() => { remotePlayersRef.current = remotePlayers }, [remotePlayers])
+
+  const broadcastFinishedRef = useRef(broadcastFinished)
 
   const [countdown, setCountdown] = useState<number | null>(null)
   const countdownTimersRef = useRef<ReturnType<typeof setTimeout>[]>([])
@@ -120,6 +126,7 @@ export function Scene({ onDebugSpeed, onDebugTransform, onLapTime, onLapChange, 
         setResetKey(k => k + 1)
         nextCheckpointRef.current = 0
         setRaceFinished(false)
+        broadcastFinishedRef.current(false)
         onLapChangeRef.current?.(0, totalLapsRef.current)
         startCountdown()
         console.log("Recording reset via 'r'")
@@ -148,8 +155,10 @@ export function Scene({ onDebugSpeed, onDebugTransform, onLapTime, onLapChange, 
 
       // Check if all laps are done (lapKeyRef still holds lap number that just finished)
       if (lapKeyRef.current >= totalLapsRef.current) {
+        const won = !remotePlayersRef.current.some(p => p.playerState?.state?.finished)
+        broadcastFinishedRef.current(true)
         setRaceFinished(true)
-        onRaceFinishedRef.current?.()
+        onRaceFinishedRef.current?.(won)
         return
       }
     }
@@ -179,11 +188,11 @@ export function Scene({ onDebugSpeed, onDebugTransform, onLapTime, onLapChange, 
       <Environment files="/textures/skybox_sky.hdr" background="both" />
       <PerspectiveCamera makeDefault position={[0, 7.5, 26]} fov={60} />
       {!thirdPerson && <OrbitControls />}
-      <ambientLight color="#ff9a3c" intensity={0.55} />
+      <ambientLight color="#ff9a3c" intensity={0.25} />
       <directionalLight
         position={[500, 120, 200]}
         color="#ffb347"
-        intensity={20.0}
+        intensity={25.0}
         castShadow={shadowsEnabled}
         shadow-mapSize-width={4096}
         shadow-mapSize-height={4096}

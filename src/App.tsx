@@ -39,6 +39,7 @@ export default function App() {
   const [raceFinished, setRaceFinished] = useState(false)
   const [remotePlayerCount, setRemotePlayerCount] = useState(0)
   const [countdown, setCountdown] = useState<number | null>(null)
+  const [raceWon, setRaceWon] = useState<boolean | null>(null)
 
   // DOM refs for imperative updates — avoids React state for per-frame values
   // which would cause 60 re-renders/sec and break canvas frameloop="demand"
@@ -76,8 +77,9 @@ export default function App() {
     }
   }, [])
 
-  const handleRaceFinished = useCallback(() => {
+  const handleRaceFinished = useCallback((won: boolean) => {
     setRaceFinished(true)
+    setRaceWon(won)
   }, [])
 
   const handlePlayerCount = useCallback((count: number) => {
@@ -95,6 +97,7 @@ export default function App() {
       if (e.key === "r") {
         setLapInfo(null)
         setRaceFinished(false)
+        setRaceWon(null)
       }
     }
     window.addEventListener("keydown", handler)
@@ -267,16 +270,33 @@ export default function App() {
           pointerEvents: "none",
         }}>
           <div style={{
-            color: "#ffdd44",
+            color: remotePlayerCount > 0 && raceWon === false ? "#ff4444" : "#ffdd44",
             fontSize: 100,
             fontFamily: "monospace",
             fontWeight: "bold",
             letterSpacing: 12,
-            textShadow: "0 0 60px #ffaa00, 0 0 20px #ff6600",
+            textShadow: remotePlayerCount > 0 && raceWon === false
+              ? "0 0 60px #ff0000, 0 0 20px #cc0000"
+              : "0 0 60px #ffaa00, 0 0 20px #ff6600",
           }}>
             FINISH
           </div>
-          <div style={{ color: "#aaa", fontFamily: "monospace", fontSize: 14, marginTop: 16 }}>
+          {remotePlayerCount > 0 && raceWon !== null && (
+            <div style={{
+              color: raceWon ? "#44ff88" : "#ff4444",
+              fontSize: 40,
+              fontFamily: "monospace",
+              fontWeight: "bold",
+              marginTop: 8,
+              letterSpacing: 3,
+              textShadow: raceWon
+                ? "0 0 40px #00ff66, 0 0 15px #00cc44"
+                : "0 0 40px #ff0000, 0 0 15px #cc0000",
+            }}>
+              {raceWon ? "You won!" : "You lost!"}
+            </div>
+          )}
+          <div style={{ color: "#aaa", fontFamily: "monospace", fontSize: 14, marginTop: 20 }}>
             press [r] to restart
           </div>
         </div>
