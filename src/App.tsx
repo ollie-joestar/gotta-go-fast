@@ -37,6 +37,8 @@ export default function App() {
   const [ghostData, setGhostData] = useState<GhostData | null>(null)
   const [lapInfo, setLapInfo] = useState<{ current: number; total: number } | null>(null)
   const [raceFinished, setRaceFinished] = useState(false)
+  const [remotePlayerCount, setRemotePlayerCount] = useState(0)
+  const [countdown, setCountdown] = useState<number | null>(null)
 
   // DOM refs for imperative updates — avoids React state for per-frame values
   // which would cause 60 re-renders/sec and break canvas frameloop="demand"
@@ -76,6 +78,14 @@ export default function App() {
 
   const handleRaceFinished = useCallback(() => {
     setRaceFinished(true)
+  }, [])
+
+  const handlePlayerCount = useCallback((count: number) => {
+    setRemotePlayerCount(count)
+  }, [])
+
+  const handleCountdown = useCallback((value: number | null) => {
+    setCountdown(value)
   }, [])
 
   useEffect(() => {
@@ -124,6 +134,8 @@ export default function App() {
             ghostData={ghostData ?? undefined}
             onDebugAIFrame={handleDebugAIFrame}
             showCheckpoints={showAIDebug}
+            onPlayerCount={handlePlayerCount}
+            onCountdown={handleCountdown}
           />
         </Physics>
       </Canvas>
@@ -150,12 +162,15 @@ export default function App() {
             LAP {lapInfo.current}/{lapInfo.total}
           </div>
         )}
+        <div style={{ color: remotePlayerCount > 0 ? "#44ff88" : "#666", fontSize: 11 }}>
+          {remotePlayerCount > 0 ? `${remotePlayerCount + 1} players online` : "1 player (solo)"}
+        </div>
         {showDebug && <>
           <div ref={speedElRef}>speed: 0.00</div>
           <div ref={posElRef}>x: 0.000  y: 0.000  z: 0.000</div>
           <div ref={quatElRef} style={{ color: "#aaddff" }}>qx: 0.0000  qy: 0.0000  qz: 0.0000  qw: 1.0000</div>
         </>}
-        <div style={{ marginTop: 4, color: "#666", fontSize: 10 }}>[h] debug  [p] ai frame  [b] bot</div>
+        <div style={{ marginTop: 4, color: "#666", fontSize: 10 }}>[h] debug  [p] ai frame  [b] bot  [f] flip</div>
       </div>
 
       <div style={{
@@ -212,6 +227,32 @@ export default function App() {
         )}
         <div style={{ color: "#666", fontSize: 10 }}>[p] ai frame</div>
       </div>
+
+      {/* Countdown overlay */}
+      {countdown !== null && (
+        <div style={{
+          position: "absolute",
+          inset: 0,
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "center",
+          pointerEvents: "none",
+        }}>
+          <div key={countdown} style={{
+            color: countdown === 0 ? "#44ff88" : "#ffffff",
+            fontSize: countdown === 0 ? 120 : 160,
+            fontFamily: "monospace",
+            fontWeight: "bold",
+            letterSpacing: 4,
+            textShadow: countdown === 0
+              ? "0 0 60px #00ff66, 0 0 20px #00ff66"
+              : "0 0 40px rgba(0,0,0,0.8), 0 0 10px rgba(0,0,0,0.9)",
+            animation: "countdownPop 0.15s ease-out",
+          }}>
+            {countdown === 0 ? "GO!" : countdown}
+          </div>
+        </div>
+      )}
 
       {/* FINISH overlay */}
       {raceFinished && (

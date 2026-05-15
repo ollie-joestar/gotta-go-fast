@@ -4,3 +4,8 @@ body, html, #root {
   width: 100%;
   overflow: hidden;
 }
+
+@keyframes countdownPop {
+  from { transform: scale(1.4); opacity: 0.4; }
+  to   { transform: scale(1);   opacity: 1; }
+}

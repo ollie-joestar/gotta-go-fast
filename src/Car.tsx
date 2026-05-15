@@ -30,9 +30,10 @@ interface CarProps {
   checkpoints?: CheckpointDef[]
   onCheckpointTrigger?: (index: number) => void
   onDebugAIFrame?: (frame: AIDebugFrame) => void
+  onNetworkFrame?: (pos: [number, number, number], quat: [number, number, number, number], lap: number) => void
 }
 
-export function Car({ startPosition, thirdPerson, lapKey, resetSignal, disabled = false, onSaveReady, onDebugSpeed, onDebugTransform, onLapTime, lapStartTimeRef, currentCheckpoint = 0, isBot = false, checkpoints, onCheckpointTrigger, onDebugAIFrame }: CarProps) {
+export function Car({ startPosition, thirdPerson, lapKey, resetSignal, disabled = false, onSaveReady, onDebugSpeed, onDebugTransform, onLapTime, lapStartTimeRef, currentCheckpoint = 0, isBot = false, checkpoints, onCheckpointTrigger, onDebugAIFrame, onNetworkFrame }: CarProps) {
   const { scene } = useGLTF("/models/car.glb")
   const size = CAR_OPTIONS.size
   const position = startPosition
@@ -144,12 +145,47 @@ export function Car({ startPosition, thirdPerson, lapKey, resetSignal, disabled 
   useBotController({ vehicleApi, chassisApi, currentCheckpoint, allCheckpoints: checkpoints ?? [], enabled: isBot && !disabled })
 
   useEffect(() => {
-    if (!disabled) return
     for (let i = 0; i < 4; i++) {
       vehicleApi.applyEngineForce(0, i)
-      vehicleApi.setBrake(CAR_OPTIONS.brakeForce * 3, i)
+      vehicleApi.setBrake(disabled ? CAR_OPTIONS.brakeForce * 3 : 0, i)
     }
   }, [disabled])
+
+  useEffect(() => {
+    function handleFlip(e: KeyboardEvent) {
+      if (e.key !== "f" || isBot) return
+
+      const [qx, qy, qz, qw] = chassisQuatRef.current
+
+      // World Y component of car's local up vector: 1 = upright, 0 = on side, -1 = inverted
+      const upY = 1 - 2 * (qx * qx + qz * qz)
+      if (upY > 0.5) return  // car is fine — do nothing
+
+      // Don't flip if the car is still moving (dynamic tip, not stuck)
+      const [vx, vy, vz] = velocityRef.current
+      if (vx * vx + vy * vy + vz * vz > 9) return  // > ~3 m/s
+
+      // Preserve horizontal heading by projecting car's local forward onto the XZ plane
+      const fwdX = -2 * (qx * qz + qw * qy)
+      const fwdZ = -(1 - 2 * (qx * qx + qy * qy))
+      const yaw = Math.atan2(-fwdX, -fwdZ)
+      const hy = yaw / 2
+      const sq = Math.sin(hy)
+      const cq = Math.cos(hy)
+
+      const [px, py, pz] = chassisPosRef.current
+      chassisApi.position.set(px, py + 1.5, pz)
+      chassisApi.velocity.set(0, 0, 0)
+      chassisApi.angularVelocity.set(0, 0, 0)
+      chassisApi.quaternion.set(0, sq, 0, cq)
+      // Snap visual car immediately so it doesn't rubber-band from the old position
+      smoothBodyPos.current.set(px, py + 1.5, pz)
+      smoothBodyQuat.current.set(0, sq, 0, cq)
+    }
+
+    window.addEventListener("keydown", handleFlip)
+    return () => window.removeEventListener("keydown", handleFlip)
+  }, [isBot, chassisApi])
 
   useEffect(() => {
     onDebugSpeed(debugSpeed)
@@ -158,10 +194,18 @@ export function Car({ startPosition, thirdPerson, lapKey, resetSignal, disabled 
   useFrame((state, delta) => {
     if (!chassisBody.current) return
 
+    // Brakes alone don't stop jitter — Cannon's suspension springs still act on the chassis.
+    // Zeroing velocity every frame guarantees the car stays still while disabled.
+    if (disabled) {
+      chassisApi.velocity.set(0, 0, 0)
+      chassisApi.angularVelocity.set(0, 0, 0)
+    }
+
     tick(state.clock.getElapsedTime() * 1000)
 
     onDebugTransform?.(chassisPosRef.current, chassisQuatRef.current)
     onLapTime?.(lapStartTimeRef?.current != null ? Date.now() - lapStartTimeRef.current : 0)
+    onNetworkFrame?.(chassisPosRef.current, chassisQuatRef.current, lapKey)
 
     // Pure AABB checkpoint detection — no physics body on checkpoints, zero bump
     if (checkpoints && onCheckpointTrigger) {
