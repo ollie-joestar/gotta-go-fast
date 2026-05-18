@@ -18,6 +18,8 @@ const COLOR_PATHS = [
 
 useGLTF.preload('/models/ContainerTextureless2.glb')
 
+const isLinux = navigator.userAgent.includes('Linux') && !navigator.userAgent.includes('Android')
+
 interface ContainerWallProps {
   position: [number, number, number]
   wallLength: number
@@ -149,16 +151,24 @@ export function ContainerWall({
         <meshBasicMaterial colorWrite={false} depthWrite={false} />
       </mesh>
       <mesh geometry={mergedGeo}>
-        <meshStandardMaterial
-          map={colorTextures[colorIdx]}
-          normalMap={normalMap}
-          aoMap={ormMap}
-          roughnessMap={ormMap}
-          metalnessMap={ormMap}
-          roughness={1}
-          metalness={1}
-          side={THREE.FrontSide}
-        />
+        {isLinux ? (
+          <meshLambertMaterial
+            map={colorTextures[colorIdx]}
+            aoMap={ormMap}
+            side={THREE.FrontSide}
+          />
+        ) : (
+          <meshStandardMaterial
+            map={colorTextures[colorIdx]}
+            normalMap={normalMap}
+            aoMap={ormMap}
+            roughnessMap={ormMap}
+            metalnessMap={ormMap}
+            roughness={1}
+            metalness={1}
+            side={THREE.FrontSide}
+          />
+        )}
       </mesh>
     </group>
   )
