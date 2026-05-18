@@ -24,6 +24,7 @@ function FPSCap({ fps = 60 }) {
 import { Car } from "./Car"
 import { Ground } from "./Ground"
 import { Track } from "./Track"
+import { QualityContext, type QualityPreset } from "./QualityContext"
 import type { CheckpointDef } from "./tracks/track01"
 import { Checkpoint } from "./Checkpoint"
 import { GhostRenderer } from "./GhostRenderer"
@@ -49,7 +50,7 @@ interface SceneProps {
 export function Scene({ onDebugSpeed, onDebugTransform, onLapTime, onLapChange, onRaceFinished, ghostData, onDebugAIFrame, showCheckpoints = false, onPlayerCount, onCountdown }: SceneProps) {
   const [thirdPerson, setThirdPerson] = useState<boolean>(true)
   const [isBot, setIsBot] = useState<boolean>(false)
-  const [shadowsEnabled, setShadowsEnabled] = useState<boolean>(false)
+  const [quality, setQuality] = useState<QualityPreset>('low')
   const [lapKey, setLapKey] = useState<number>(0)
   const lapKeyRef = useRef<number>(0)
   const [currentCheckpoint, setCurrentCheckpoint] = useState<number>(0)
@@ -116,7 +117,7 @@ export function Scene({ onDebugSpeed, onDebugTransform, onLapTime, onLapChange, 
     function keydownHandler(e: KeyboardEvent) {
       if (e.key === "c") setThirdPerson(prev => !prev)
       if (e.key === "b") setIsBot(prev => !prev)
-      if (e.key === "u") setShadowsEnabled(prev => !prev)
+      if (e.key === "u") setQuality(prev => prev === 'low' ? 'high' : 'low')
       if (e.key === "r") {
         lapKeyRef.current = 0
         setLapKey(0)
@@ -183,72 +184,74 @@ export function Scene({ onDebugSpeed, onDebugTransform, onLapTime, onLapChange, 
   }, [])
 
   return (
-    <Suspense fallback={null}>
-      <FPSCap fps={60} />
-      <Environment files="/textures/skybox_sky.hdr" background="both" />
-      <PerspectiveCamera makeDefault position={[0, 7.5, 26]} fov={60} />
-      {!thirdPerson && <OrbitControls />}
-      <ambientLight color="#ff9a3c" intensity={0.25} />
-      <directionalLight
-        position={[500, 120, 200]}
-        color="#ffb347"
-        intensity={25.0}
-        castShadow={shadowsEnabled}
-        shadow-mapSize-width={4096}
-        shadow-mapSize-height={4096}
-        shadow-camera-near={1}
-        shadow-camera-far={1200}
-        shadow-camera-left={-350}
-        shadow-camera-right={350}
-        shadow-camera-top={350}
-        shadow-camera-bottom={-350}
-        shadow-bias={0.000}
-        shadow-normalBias={0.1}
-        shadow-intensity={1}
-        shadow-radius={5}
-      />
-      <Track onTrigger={handleTrigger} cooldownRef={triggerCooldownRef} onLoad={handleTrackLoad} />
-      <Ground />
-      {checkpoints.map((cp, i) => (
-        <Checkpoint
-          key={i}
-          index={i}
-          position={cp.position}
-          size={cp.size}
-          visualSize={cp.visualSize}
-          rotation={cp.rotation}
-          color={cp.color}
-          visible={showCheckpoints}
+    <QualityContext.Provider value={quality}>
+      <Suspense fallback={null}>
+        <FPSCap fps={60} />
+        <Environment files="/textures/skybox_sky.hdr" background="both" />
+        <PerspectiveCamera makeDefault position={[0, 7.5, 26]} fov={60} />
+        {!thirdPerson && <OrbitControls />}
+        <ambientLight color="#ff9a3c" intensity={0.25} />
+        <directionalLight
+          position={[500, 120, 200]}
+          color="#ffb347"
+          intensity={25.0}
+          castShadow={quality === 'high'}
+          shadow-mapSize-width={4096}
+          shadow-mapSize-height={4096}
+          shadow-camera-near={1}
+          shadow-camera-far={1200}
+          shadow-camera-left={-350}
+          shadow-camera-right={350}
+          shadow-camera-top={350}
+          shadow-camera-bottom={-350}
+          shadow-bias={0.000}
+          shadow-normalBias={0.1}
+          shadow-intensity={1}
+          shadow-radius={5}
         />
-      ))}
-      {carStartPos && (
-        <Car
-          startPosition={carStartPos}
-          resetSignal={resetKey}
-          thirdPerson={thirdPerson}
-          lapKey={lapKey}
-          onSaveReady={handleSaveReady}
-          onDebugSpeed={onDebugSpeed}
-          onDebugTransform={onDebugTransform}
-          onLapTime={onLapTime}
-          lapStartTimeRef={lapStartTime}
-          currentCheckpoint={currentCheckpoint}
-          isBot={isBot}
-          checkpoints={checkpoints}
-          disabled={raceFinished || (countdown !== null && countdown > 0)}
-          onCheckpointTrigger={(idx) => {
-            if (idx !== nextCheckpointRef.current) return
-            nextCheckpointRef.current = idx + 1  // advances to N when idx = N-1 (signals all done)
-            setCurrentCheckpoint((idx + 1) % checkpoints.length)
-          }}
-          onDebugAIFrame={onDebugAIFrame}
-          onNetworkFrame={broadcast}
-        />
-      )}
-      {ghostData && <GhostRenderer ghostData={ghostData} startSignal={ghostStartSignal} />}
-      {remotePlayers.map(remote => (
-        <RemoteCarRenderer key={remote.id} remote={remote} />
-      ))}
-    </Suspense>
+        <Track onTrigger={handleTrigger} cooldownRef={triggerCooldownRef} onLoad={handleTrackLoad} />
+        <Ground />
+        {checkpoints.map((cp, i) => (
+          <Checkpoint
+            key={i}
+            index={i}
+            position={cp.position}
+            size={cp.size}
+            visualSize={cp.visualSize}
+            rotation={cp.rotation}
+            color={cp.color}
+            visible={showCheckpoints}
+          />
+        ))}
+        {carStartPos && (
+          <Car
+            startPosition={carStartPos}
+            resetSignal={resetKey}
+            thirdPerson={thirdPerson}
+            lapKey={lapKey}
+            onSaveReady={handleSaveReady}
+            onDebugSpeed={onDebugSpeed}
+            onDebugTransform={onDebugTransform}
+            onLapTime={onLapTime}
+            lapStartTimeRef={lapStartTime}
+            currentCheckpoint={currentCheckpoint}
+            isBot={isBot}
+            checkpoints={checkpoints}
+            disabled={raceFinished || (countdown !== null && countdown > 0)}
+            onCheckpointTrigger={(idx) => {
+              if (idx !== nextCheckpointRef.current) return
+              nextCheckpointRef.current = idx + 1  // advances to N when idx = N-1 (signals all done)
+              setCurrentCheckpoint((idx + 1) % checkpoints.length)
+            }}
+            onDebugAIFrame={onDebugAIFrame}
+            onNetworkFrame={broadcast}
+          />
+        )}
+        {ghostData && <GhostRenderer ghostData={ghostData} startSignal={ghostStartSignal} />}
+        {remotePlayers.map(remote => (
+          <RemoteCarRenderer key={remote.id} remote={remote} />
+        ))}
+      </Suspense>
+    </QualityContext.Provider>
   )
 }

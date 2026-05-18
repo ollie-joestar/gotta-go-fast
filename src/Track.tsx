@@ -1,8 +1,11 @@
-import { useState, useEffect, useRef } from "react"
+import { useState, useEffect, useRef, useMemo } from "react"
 import type { MutableRefObject } from "react"
+import { useFrame } from "@react-three/fiber"
+import * as THREE from "three"
 import { Segment } from "./Segment"
 import { TriggerBox } from "./TriggerBox"
 import type { CheckpointDef } from "./tracks/track01"
+import { useQuality } from "./QualityContext"
 
 interface TrackProps {
   onTrigger?: () => void
@@ -57,15 +60,13 @@ function initialDir(cellDir: number): Dir {
   }
 }
 
-// Given a cell type and the direction the car is travelling INTO it, return the exit direction.
 function exitDir(cellDir: number, travel: Dir): Dir {
-  // Straights pass through unchanged
   if (cellDir === 8 || cellDir === 2 || cellDir === 4 || cellDir === 6) return travel
   switch (cellDir) {
-    case 7: return travel === 'N' ? 'E' : 'S'   // NW: N→E, W→S
-    case 9: return travel === 'N' ? 'W' : 'S'   // NE: N→W, E→S
-    case 1: return travel === 'S' ? 'E' : 'N'   // SW: S→E, W→N
-    case 3: return travel === 'S' ? 'W' : 'N'   // SE: S→W, E→N
+    case 7: return travel === 'N' ? 'E' : 'S'
+    case 9: return travel === 'N' ? 'W' : 'S'
+    case 1: return travel === 'S' ? 'E' : 'N'
+    case 3: return travel === 'S' ? 'W' : 'N'
   }
   return travel
 }
@@ -87,8 +88,8 @@ const CP_COLORS = [
 
 function buildCheckpoints(data: TrackData): CheckpointDef[] {
   const { grid, startRow, startCol, length: L, width: W, height: H } = data
-  const roadW = L - W  // drivable gap between walls
-  const thin = W           // checkpoint slab thickness (same as wall width)
+  const roadW = L - W
+  const thin = W
 
   const checkpoints: CheckpointDef[] = []
   let row = startRow, col = startCol
@@ -103,20 +104,17 @@ function buildCheckpoints(data: TrackData): CheckpointDef[] {
 
     let cp: CheckpointDef
     if (cellDir === 8 || cellDir === 2 || cellDir === 4 || cellDir === 6) {
-      // Straight: thin perpendicular slab
       cp = {
         position: [cx, H / 2, cz],
         size: isNS ? [roadW, H, thin] : [thin, H, roadW],
         color,
       }
     } else {
-      // Corner: \ diagonal for 7+3, / diagonal for 9+1
-      // The AABB covers the full road square; visual is a rotated thin slab.
       const rotY = (cellDir === 7 || cellDir === 3) ? -Math.PI / 4 : Math.PI / 4
       cp = {
         position: [cx, H / 2, cz],
-        size: [roadW, H, roadW],               // AABB for car detection
-        visualSize: [roadW * Math.SQRT2, H, thin],   // diagonal slab for debug view
+        size: [roadW, H, roadW],
+        visualSize: [roadW * Math.SQRT2, H, thin],
         rotation: [0, rotY, 0],
         color,
       }
@@ -138,10 +136,10 @@ function carStartFromData(data: TrackData): [number, number, number] {
   const dir = data.grid[data.startRow]?.[data.startCol] ?? 8
   const half = data.length / 2
   switch (dir) {
-    case 8: return [0, 1, half]   // going N → spawn south (+Z)
-    case 2: return [0, 1, -half]   // going S → spawn north (-Z)
-    case 6: return [-half, 1, 0]   // going E → spawn west  (-X)
-    case 4: return [half, 1, 0]   // going W → spawn east  (+X)
+    case 8: return [0, 1, half]
+    case 2: return [0, 1, -half]
+    case 6: return [-half, 1, 0]
+    case 4: return [half, 1, 0]
     default: return [0, 1, half]
   }
 }
@@ -150,10 +148,51 @@ function carStartFromData(data: TrackData): [number, number, number] {
 
 const COOLDOWN_MS = 3000
 
+// World-unit radius within which segments are rendered on Low quality (~4-5 tiles)
+const CULL_DISTANCE = 300
+const CULL_DIST_SQ = CULL_DISTANCE * CULL_DISTANCE
+
 export function Track({ onTrigger, cooldownRef, onLoad }: TrackProps) {
   const [data, setData] = useState<TrackData | null>(null)
   const internalCooldown = useRef<number>(0)
   const lastTriggerTime = cooldownRef ?? internalCooldown
+  const quality = useQuality()
+
+  // Flat list of non-empty segments with their world positions
+  const segments = useMemo(() => {
+    if (!data) return []
+    const { length, startRow, startCol, grid } = data
+    const result: { r: number; c: number; dir: number; pos: [number, number, number] }[] = []
+    grid.forEach((row, r) => {
+      row.forEach((dir, c) => {
+        if (dir !== 0) result.push({ r, c, dir, pos: [(c - startCol) * length, 0, (r - startRow) * length] })
+      })
+    })
+    return result
+  }, [data])
+
+  const segmentGroupRefs = useRef<(THREE.Group | null)[]>([])
+
+  // When switching away from Low, make all segments visible again
+  useEffect(() => {
+    if (quality !== 'low') {
+      segmentGroupRefs.current.forEach(ref => { if (ref) ref.visible = true })
+    }
+  }, [quality])
+
+  // Per-frame distance cull — only runs on Low quality
+  useFrame(({ camera }) => {
+    if (quality !== 'low') return
+    const cx = camera.position.x
+    const cz = camera.position.z
+    segments.forEach((seg, i) => {
+      const ref = segmentGroupRefs.current[i]
+      if (!ref) return
+      const dx = seg.pos[0] - cx
+      const dz = seg.pos[2] - cz
+      ref.visible = dx * dx + dz * dz < CULL_DIST_SQ
+    })
+  })
 
   useEffect(() => {
     fetch('/tracks/track01')
@@ -167,30 +206,27 @@ export function Track({ onTrigger, cooldownRef, onLoad }: TrackProps) {
 
   if (!data) return null
 
-  const { length, width, height, startRow, startCol, grid } = data
-
-  const startDir = grid[startRow]?.[startCol] ?? 8
+  const { length, width, height, startRow, startCol } = data
+  const startDir = data.grid[startRow]?.[startCol] ?? 8
   const isNS = startDir === 8 || startDir === 2
   const triggerScale: [number, number, number] = isNS ? [length, height, 2] : [2, height, length]
 
   return (
     <>
-      {grid.flatMap((row, r) =>
-        row.map((dir, c) => {
-          if (dir === 0) return null
-          return (
-            <Segment
-              key={`${r}-${c}`}
-              position={[(c - startCol) * length, 0, (r - startRow) * length]}
-              length={length}
-              width={width}
-              height={height}
-              direction={dir}
-            />
-          )
-        })
-      )}
-
+      {segments.map((seg, i) => (
+        <group
+          key={`${seg.r}-${seg.c}`}
+          ref={el => { segmentGroupRefs.current[i] = el }}
+        >
+          <Segment
+            position={seg.pos}
+            length={length}
+            width={width}
+            height={height}
+            direction={seg.dir}
+          />
+        </group>
+      ))}
       {onTrigger && (
         <TriggerBox
           position={[0, height / 2, 0]}

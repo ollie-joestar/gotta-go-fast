@@ -9,7 +9,7 @@ interface TriggerBoxProps {
   color?: string
 }
 
-export function TriggerBox({ position, scale, onCollide, color = "magenta" }: TriggerBoxProps) {
+export function TriggerBox({ position, scale, onCollide, color = "white" }: TriggerBoxProps) {
   useBox<THREE.Mesh>(() => ({
     args: scale,
     position,
@@ -21,7 +21,7 @@ export function TriggerBox({ position, scale, onCollide, color = "magenta" }: Tr
   return (
     <mesh position={position}>
       <boxGeometry args={scale} />
-      <meshBasicMaterial color={color} opacity={1.00} wireframe />
+      <meshBasicMaterial color={color} opacity={0.25} transparent />
     </mesh>
   )
 }
