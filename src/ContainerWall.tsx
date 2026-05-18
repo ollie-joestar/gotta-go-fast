@@ -3,6 +3,7 @@ import { useGLTF, useTexture } from "@react-three/drei"
 import { useMemo, useEffect } from "react"
 import * as THREE from "three"
 import { mergeGeometries } from 'three/addons/utils/BufferGeometryUtils.js'
+import { useQuality } from "./QualityContext"
 
 const COLOR_PATHS = [
   '/textures/container/Container_Material_BaseColor_blue_very_smol.png',
@@ -18,7 +19,8 @@ const COLOR_PATHS = [
 
 useGLTF.preload('/models/ContainerTextureless2.glb')
 
-const isLinux = navigator.userAgent.includes('Linux') && !navigator.userAgent.includes('Android')
+// Solid colors matching the 9 container texture variants, used on Low quality
+const SOLID_COLORS = ['#4a6fc0', '#40b0c0', '#40a860', '#808080', '#d06898', '#8848c8', '#c03838', '#c8c8c8', '#d4a828']
 
 interface ContainerWallProps {
   position: [number, number, number]
@@ -98,6 +100,8 @@ export function ContainerWall({
     return [v.x, v.y, v.z]
   }, [geometry])
 
+  const quality = useQuality()
+
   // One random color for the entire wall, picked once on mount
   const colorIdx = useMemo(() => Math.floor(Math.random() * COLOR_PATHS.length), [])
 
@@ -151,13 +155,7 @@ export function ContainerWall({
         <meshBasicMaterial colorWrite={false} depthWrite={false} />
       </mesh>
       <mesh geometry={mergedGeo}>
-        {isLinux ? (
-          <meshLambertMaterial
-            map={colorTextures[colorIdx]}
-            aoMap={ormMap}
-            side={THREE.FrontSide}
-          />
-        ) : (
+        {quality === 'high' ? (
           <meshStandardMaterial
             map={colorTextures[colorIdx]}
             normalMap={normalMap}
@@ -166,6 +164,11 @@ export function ContainerWall({
             metalnessMap={ormMap}
             roughness={1}
             metalness={1}
+            side={THREE.FrontSide}
+          />
+        ) : (
+          <meshLambertMaterial
+            color={SOLID_COLORS[colorIdx]}
             side={THREE.FrontSide}
           />
         )}
