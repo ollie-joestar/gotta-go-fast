@@ -5,15 +5,15 @@ import * as THREE from "three"
 import { mergeGeometries } from 'three/addons/utils/BufferGeometryUtils.js'
 
 const COLOR_PATHS = [
-  '/textures/container/Container_Material_BaseColor_blue_smol.png',
-  '/textures/container/Container_Material_BaseColor_cyan_smol.png',
-  '/textures/container/Container_Material_BaseColor_green_smol.png',
-  '/textures/container/Container_Material_BaseColor_grey_smol.png',
-  '/textures/container/Container_Material_BaseColor_pink_smol.png',
-  '/textures/container/Container_Material_BaseColor_purple_smol.png',
-  '/textures/container/Container_Material_BaseColor_red_smol.png',
-  '/textures/container/Container_Material_BaseColor_white_smol.png',
-  '/textures/container/Container_Material_BaseColor_yellow_smol.png',
+  '/textures/container/Container_Material_BaseColor_blue_very_smol.png',
+  '/textures/container/Container_Material_BaseColor_cyan_very_smol.png',
+  '/textures/container/Container_Material_BaseColor_green_very_smol.png',
+  '/textures/container/Container_Material_BaseColor_grey_very_smol.png',
+  '/textures/container/Container_Material_BaseColor_pink_very_smol.png',
+  '/textures/container/Container_Material_BaseColor_purple_very_smol.png',
+  '/textures/container/Container_Material_BaseColor_red_very_smol.png',
+  '/textures/container/Container_Material_BaseColor_white_very_smol.png',
+  '/textures/container/Container_Material_BaseColor_yellow_very_smol.png',
 ]
 
 useGLTF.preload('/models/ContainerTextureless2.glb')
@@ -65,7 +65,7 @@ export function ContainerWall({
     normalMap.needsUpdate = true
   }, [normalMap])
 
-  const ormMap = useTexture('/textures/container/Container_Material_OcclusionRoughnessMetallic_smol.png') as THREE.Texture
+  const ormMap = useTexture('/textures/container/Container_Material_OcclusionRoughnessMetallic_very_smol.png') as THREE.Texture
   useMemo(() => {
     ormMap.flipY = false
     ormMap.colorSpace = THREE.LinearSRGBColorSpace

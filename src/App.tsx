@@ -119,8 +119,9 @@ export default function App() {
     reader.readAsText(file)
   }, [])
 
-  const isLinux = navigator.userAgent.includes('Linux') && !navigator.userAgent.includes('Android')
-  const dpr = isLinux ? Math.min(window.devicePixelRatio, 600 / window.innerHeight) : window.devicePixelRatio
+  // const isLinux = navigator.userAgent.includes('Linux')
+  // const dpr = isLinux ? Math.min(window.devicePixelRatio, 600 / window.innerHeight) : window.devicePixelRatio
+  const dpr = window.devicePixelRatio
 
   return (
     <div style={{ position: "relative", width: "100vw", height: "100vh" }}>
