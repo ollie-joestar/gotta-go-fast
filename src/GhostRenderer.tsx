@@ -8,6 +8,7 @@ import type { GhostData } from "./DataTypes"
 interface GhostRendererProps {
   ghostData: GhostData
   startSignal: number  // increments every time the ghost should restart from frame 0
+  lapKey: number       // resets to 0 on 'r' — used to hide the ghost between races
 }
 
 // Module-level scratch objects — avoids per-frame allocation
@@ -16,7 +17,7 @@ const _p1 = new THREE.Vector3()
 const _q0 = new THREE.Quaternion()
 const _q1 = new THREE.Quaternion()
 
-export function GhostRenderer({ ghostData, startSignal }: GhostRendererProps) {
+export function GhostRenderer({ ghostData, startSignal, lapKey }: GhostRendererProps) {
   const { scene } = useGLTF("/models/car.glb")
 
   // Deep-clone the car scene so it can exist independently from the player car
@@ -38,13 +39,28 @@ export function GhostRenderer({ ghostData, startSignal }: GhostRendererProps) {
   const groupRef = useRef<THREE.Group | null>(null)
   const startTimeRef = useRef<number | null>(null)
   const hasStartedRef = useRef(false)
+  // Capture the startSignal value at mount time. The ghost should only respond
+  // to signals that arrive AFTER mount — not the one that was current when the
+  // ghost file was loaded (which could be mid-race and out of sync).
+  const mountSignalRef = useRef(startSignal)
 
   useEffect(() => {
-    if (startSignal === 0) return  // don't play until the first S/F crossing
+    // Ignore signal 0 (pre-race) and the value that existed when we mounted
+    // (guards against starting mid-race when a ghost file is loaded late).
+    if (startSignal === 0 || startSignal === mountSignalRef.current) return
     hasStartedRef.current = true
     startTimeRef.current = null  // reset clock on next frame
     if (groupRef.current) groupRef.current.visible = true
   }, [startSignal])
+
+  // Hide and reset ghost whenever lapKey drops back to 0 ('r' pressed).
+  // The next S/F crossing will increment startSignal and show it again.
+  useEffect(() => {
+    if (lapKey !== 0) return
+    hasStartedRef.current = false
+    startTimeRef.current = null
+    if (groupRef.current) groupRef.current.visible = false
+  }, [lapKey])
 
   useFrame((state) => {
     if (!groupRef.current || !hasStartedRef.current) return

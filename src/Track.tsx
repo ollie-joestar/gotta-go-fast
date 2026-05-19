@@ -10,7 +10,13 @@ import { useQuality } from "./QualityContext"
 interface TrackProps {
   onTrigger?: () => void
   cooldownRef?: MutableRefObject<number>
-  onLoad?: (carStartPos: [number, number, number], checkpoints: CheckpointDef[], laps: number) => void
+  onLoad?: (
+    carStartPos: [number, number, number],
+    checkpoints: CheckpointDef[],
+    laps: number,
+    triggerPos: [number, number, number],
+    triggerSize: [number, number, number],
+  ) => void
 }
 
 interface TrackData {
@@ -200,7 +206,13 @@ export function Track({ onTrigger, cooldownRef, onLoad }: TrackProps) {
       .then(text => {
         const parsed = parseTrack(text)
         setData(parsed)
-        onLoad?.(carStartFromData(parsed), buildCheckpoints(parsed), parsed.laps)
+        const startDir = parsed.grid[parsed.startRow]?.[parsed.startCol] ?? 8
+        const isNS = startDir === 8 || startDir === 2
+        const trigPos: [number, number, number] = [0, parsed.height / 2, 0]
+        const trigSize: [number, number, number] = isNS
+          ? [parsed.length, parsed.height, 2]
+          : [2, parsed.height, parsed.length]
+        onLoad?.(carStartFromData(parsed), buildCheckpoints(parsed), parsed.laps, trigPos, trigSize)
       })
   }, [])
 
@@ -231,6 +243,7 @@ export function Track({ onTrigger, cooldownRef, onLoad }: TrackProps) {
         <TriggerBox
           position={[0, height / 2, 0]}
           scale={triggerScale}
+          collisionFilterMask={1}
           onCollide={() => {
             const now = Date.now()
             if (now - lastTriggerTime.current < COOLDOWN_MS) return

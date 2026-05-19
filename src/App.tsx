@@ -5,6 +5,8 @@ import { Scene } from "./Scene"
 import { useState, useCallback, useEffect, useRef } from "react"
 import type { GhostData } from "./DataTypes"
 import type { AIDebugFrame } from "./aiTypes"
+import { useMultiplayer } from "./useMultiplayer"
+import { me } from "playroomkit"
 
 function fmtTime(ms: number) {
   const m = Math.floor(ms / 60000)
@@ -37,9 +39,28 @@ export default function App() {
   const [ghostData, setGhostData] = useState<GhostData | null>(null)
   const [lapInfo, setLapInfo] = useState<{ current: number; total: number } | null>(null)
   const [raceFinished, setRaceFinished] = useState(false)
-  const [remotePlayerCount, setRemotePlayerCount] = useState(0)
   const [countdown, setCountdown] = useState<number | null>(null)
   const [raceWon, setRaceWon] = useState<boolean | null>(null)
+
+  // Multiplayer — lives here so App has access to lobby / phase state
+  const {
+    remotePlayers,
+    broadcast,
+    broadcastFinished,
+    registerBotPlayer,
+    broadcastBot,
+    phase,
+    amHost,
+    playersList,
+    allReady,
+    setReady,
+    startGame,
+    roomCode,
+    isConnected,
+  } = useMultiplayer()
+
+  // Real remote players (excludes local bot for "online" display)
+  const realRemoteCount = remotePlayers.filter(r => r.id !== "bot-player").length
 
   // DOM refs for imperative updates — avoids React state for per-frame values
   // which would cause 60 re-renders/sec and break canvas frameloop="demand"
@@ -82,10 +103,6 @@ export default function App() {
     setRaceWon(won)
   }, [])
 
-  const handlePlayerCount = useCallback((count: number) => {
-    setRemotePlayerCount(count)
-  }, [])
-
   const handleCountdown = useCallback((value: number | null) => {
     setCountdown(value)
   }, [])
@@ -123,6 +140,8 @@ export default function App() {
   // const dpr = isLinux ? Math.min(window.devicePixelRatio, 600 / window.innerHeight) : window.devicePixelRatio
   const dpr = window.devicePixelRatio
 
+  const localId = me()?.id
+
   return (
     <div style={{ position: "relative", width: "100vw", height: "100vh" }}>
 
@@ -141,8 +160,15 @@ export default function App() {
             ghostData={ghostData ?? undefined}
             onDebugAIFrame={handleDebugAIFrame}
             showCheckpoints={showAIDebug}
-            onPlayerCount={handlePlayerCount}
             onCountdown={handleCountdown}
+            remotePlayers={remotePlayers}
+            broadcast={broadcast}
+            broadcastFinished={broadcastFinished}
+            registerBotPlayer={registerBotPlayer}
+            broadcastBot={broadcastBot}
+            gamePhase={phase}
+            allReady={allReady}
+            onGameReady={setReady}
           />
         </Physics>
       </Canvas>
@@ -169,8 +195,8 @@ export default function App() {
             LAP {lapInfo.current}/{lapInfo.total}
           </div>
         )}
-        <div style={{ color: remotePlayerCount > 0 ? "#44ff88" : "#666", fontSize: 11 }}>
-          {remotePlayerCount > 0 ? `${remotePlayerCount + 1} players online` : "1 player (solo)"}
+        <div style={{ color: realRemoteCount > 0 ? "#44ff88" : "#666", fontSize: 11 }}>
+          {realRemoteCount > 0 ? `${realRemoteCount + 1} players online` : "1 player (solo)"}
         </div>
         {showDebug && <>
           <div ref={speedElRef}>speed: 0.00</div>
@@ -235,7 +261,141 @@ export default function App() {
         <div style={{ color: "#666", fontSize: 10 }}>[p] ai frame</div>
       </div>
 
-      {/* Countdown overlay */}
+      {/* ── Lobby overlay ─────────────────────────────────────────────────── */}
+      {isConnected && phase === "lobby" && (
+        <div style={{
+          position: "absolute",
+          inset: 0,
+          display: "flex",
+          flexDirection: "column",
+          alignItems: "center",
+          justifyContent: "center",
+          background: "rgba(0,0,0,0.82)",
+          gap: 16,
+        }}>
+          <div style={{
+            color: "#ffdd44",
+            fontSize: 52,
+            fontFamily: "monospace",
+            fontWeight: "bold",
+            letterSpacing: 8,
+            textShadow: "0 0 40px #ffaa00",
+          }}>
+            LOBBY
+          </div>
+
+          {roomCode && (
+            <div style={{ color: "#aaa", fontFamily: "monospace", fontSize: 14 }}>
+              Room code: <span style={{ color: "#44ddff", fontWeight: "bold", letterSpacing: 2 }}>{roomCode}</span>
+            </div>
+          )}
+
+          {/* Player list */}
+          <div style={{
+            background: "rgba(255,255,255,0.06)",
+            border: "1px solid rgba(255,255,255,0.12)",
+            borderRadius: 8,
+            padding: "12px 24px",
+            minWidth: 240,
+            display: "flex",
+            flexDirection: "column",
+            gap: 8,
+          }}>
+            <div style={{ color: "#888", fontFamily: "monospace", fontSize: 11, marginBottom: 4, letterSpacing: 1 }}>
+              PLAYERS ({playersList.length})
+            </div>
+            {playersList.map(p => {
+              const name = p.getProfile?.()?.name ?? p.id.slice(0, 10)
+              const isMe = p.id === localId
+              return (
+                <div key={p.id} style={{
+                  display: "flex",
+                  alignItems: "center",
+                  gap: 10,
+                  fontFamily: "monospace",
+                  fontSize: 14,
+                  color: isMe ? "#ffdd44" : "#ffffff",
+                }}>
+                  <span style={{
+                    width: 10,
+                    height: 10,
+                    borderRadius: "50%",
+                    background: p.getProfile?.()?.color?.hex ?? "#888",
+                    display: "inline-block",
+                    flexShrink: 0,
+                  }} />
+                  <span>{name}{isMe ? " (you)" : ""}</span>
+                  {isMe && amHost && (
+                    <span style={{ color: "#ffaa44", fontSize: 10, marginLeft: 4 }}>HOST</span>
+                  )}
+                </div>
+              )
+            })}
+          </div>
+
+          {/* Host starts the race; guests wait */}
+          {amHost ? (
+            <button
+              onClick={startGame}
+              style={{
+                marginTop: 8,
+                padding: "14px 48px",
+                fontSize: 22,
+                fontFamily: "monospace",
+                fontWeight: "bold",
+                letterSpacing: 3,
+                color: "#000",
+                background: "#ffdd44",
+                border: "none",
+                borderRadius: 8,
+                cursor: "pointer",
+                textTransform: "uppercase",
+                boxShadow: "0 0 30px rgba(255,200,0,0.5)",
+              }}
+            >
+              START RACE
+            </button>
+          ) : (
+            <div style={{ color: "#888", fontFamily: "monospace", fontSize: 14, marginTop: 8 }}>
+              Waiting for host to start the race…
+            </div>
+          )}
+        </div>
+      )}
+
+      {/* ── Loading overlay (host started, assets still loading) ───────────── */}
+      {isConnected && phase === "playing" && !allReady && (
+        <div style={{
+          position: "absolute",
+          inset: 0,
+          display: "flex",
+          flexDirection: "column",
+          alignItems: "center",
+          justifyContent: "center",
+          background: "rgba(0,0,0,0.75)",
+          gap: 16,
+          pointerEvents: "none",
+        }}>
+          <div style={{
+            color: "#ffffff",
+            fontSize: 32,
+            fontFamily: "monospace",
+            fontWeight: "bold",
+            letterSpacing: 4,
+            animation: "loadingPulse 1.2s ease-in-out infinite",
+          }}>
+            LOADING…
+          </div>
+          <div style={{ color: "#666", fontFamily: "monospace", fontSize: 13 }}>
+            Waiting for all players to finish loading
+          </div>
+          <div style={{ color: "#444", fontFamily: "monospace", fontSize: 11 }}>
+            {playersList.length} player{playersList.length !== 1 ? "s" : ""} in room
+          </div>
+        </div>
+      )}
+
+      {/* ── Countdown overlay ─────────────────────────────────────────────── */}
       {countdown !== null && (
         <div style={{
           position: "absolute",
@@ -261,7 +421,7 @@ export default function App() {
         </div>
       )}
 
-      {/* FINISH overlay */}
+      {/* ── FINISH overlay ────────────────────────────────────────────────── */}
       {raceFinished && (
         <div style={{
           position: "absolute",
@@ -274,18 +434,18 @@ export default function App() {
           pointerEvents: "none",
         }}>
           <div style={{
-            color: remotePlayerCount > 0 && raceWon === false ? "#ff4444" : "#ffdd44",
+            color: realRemoteCount > 0 && raceWon === false ? "#ff4444" : "#ffdd44",
             fontSize: 100,
             fontFamily: "monospace",
             fontWeight: "bold",
             letterSpacing: 12,
-            textShadow: remotePlayerCount > 0 && raceWon === false
+            textShadow: realRemoteCount > 0 && raceWon === false
               ? "0 0 60px #ff0000, 0 0 20px #cc0000"
               : "0 0 60px #ffaa00, 0 0 20px #ff6600",
           }}>
             FINISH
           </div>
-          {remotePlayerCount > 0 && raceWon !== null && (
+          {realRemoteCount > 0 && raceWon !== null && (
             <div style={{
               color: raceWon ? "#44ff88" : "#ff4444",
               fontSize: 40,

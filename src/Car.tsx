@@ -86,7 +86,7 @@ export function Car({ startPosition, thirdPerson, lapKey, resetSignal, disabled 
   const chassisPosRef = useRef<[number, number, number]>([0, 1, 0])
   const chassisQuatRef = useRef<[number, number, number, number]>([0, 0, 0, 1])
 
-  const { tick, save } = useGhostRecorder(chassisRef, lapKey)
+  const { tick, save } = useGhostRecorder(lapKey)
 
   useEffect(() => {
     onSaveReady(save)
@@ -201,10 +201,13 @@ export function Car({ startPosition, thirdPerson, lapKey, resetSignal, disabled 
       chassisApi.angularVelocity.set(0, 0, 0)
     }
 
-    tick(state.clock.getElapsedTime() * 1000)
+    tick(state.clock.getElapsedTime() * 1000, chassisPosRef.current, chassisQuatRef.current)
 
     onDebugTransform?.(chassisPosRef.current, chassisQuatRef.current)
-    onLapTime?.(lapStartTimeRef?.current != null ? Date.now() - lapStartTimeRef.current : 0)
+    // Don't update the lap timer when disabled (race finished) — freezes it at the finish time
+    if (!disabled) {
+      onLapTime?.(lapStartTimeRef?.current != null ? Date.now() - lapStartTimeRef.current : 0)
+    }
     onNetworkFrame?.(chassisPosRef.current, chassisQuatRef.current, lapKey)
 
     // Pure AABB checkpoint detection — no physics body on checkpoints, zero bump

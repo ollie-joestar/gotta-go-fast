@@ -2,13 +2,11 @@
 import { useEffect, useRef, useCallback } from "react"
 import type { GhostData, GhostFrame } from "./DataTypes"
 import { TRACK_ID, VERSION } from "./tracks/track01"
-import * as THREE from "three"
 
 const RECORD_HZ = 10
 const RECORD_INTERVAL_MS = 1000 / RECORD_HZ
 
 export function useGhostRecorder(
-  chassisRef: React.RefObject<THREE.Mesh | null>,
   lapKey: number,
   trackId: string = TRACK_ID,
   userId: string = "player1"
@@ -31,32 +29,32 @@ export function useGhostRecorder(
     }
   }, [lapKey])
 
-  // stable reference — never recreated
-  const tick = useCallback((now: number) => {
-    if (!isRecordingRef.current || !chassisRef.current) return
+  // Accepts pos/quat directly from cannon subscriptions — no matrixWorld needed
+  const tick = useCallback((
+    now: number,
+    pos: [number, number, number],
+    quat: [number, number, number, number],
+  ) => {
+    if (!isRecordingRef.current) return
     if (startTimeRef.current === null) startTimeRef.current = now
     const elapsed = now - startTimeRef.current
     if (elapsed - lastRecordRef.current < RECORD_INTERVAL_MS) return
     lastRecordRef.current = elapsed
-    const pos = new THREE.Vector3()
-    pos.setFromMatrixPosition(chassisRef.current.matrixWorld)
-    const quat = new THREE.Quaternion()
-    quat.setFromRotationMatrix(chassisRef.current.matrixWorld)
     framesRef.current.push({
       t: Math.round(elapsed),
       p: [
-        parseFloat(pos.x.toFixed(3)),
-        parseFloat(pos.y.toFixed(3)),
-        parseFloat(pos.z.toFixed(3)),
+        parseFloat(pos[0].toFixed(3)),
+        parseFloat(pos[1].toFixed(3)),
+        parseFloat(pos[2].toFixed(3)),
       ],
       q: [
-        parseFloat(quat.x.toFixed(4)),
-        parseFloat(quat.y.toFixed(4)),
-        parseFloat(quat.z.toFixed(4)),
-        parseFloat(quat.w.toFixed(4)),
+        parseFloat(quat[0].toFixed(4)),
+        parseFloat(quat[1].toFixed(4)),
+        parseFloat(quat[2].toFixed(4)),
+        parseFloat(quat[3].toFixed(4)),
       ],
     })
-  }, [chassisRef])  // chassisRef is stable, so this is created once
+  }, [])
 
   // stable reference — reads framesRef directly, never stale
   const save = useCallback((lapTimeMs: number) => {
@@ -89,16 +87,8 @@ export function useGhostRecorder(
     document.body.removeChild(a)
     URL.revokeObjectURL(url)
 
-    // Extra logging to help debug data handling
-    // Option 1 — open in new tab (not recommended for large data, but works)
-    // DOESNT WORK IN MY ZEN
-    // window.open(url, "_blank")
-
-    // Option 2 — log it to console so you can copy it
-    // console.log("GHOST DATA:", json)
-
     return ghostData
-  }, [trackId])  // trackId is a stable string, so this is created once
+  }, [trackId])
 
   return { tick, save, frames: framesRef }
 }

@@ -30,8 +30,9 @@ import { Checkpoint } from "./Checkpoint"
 import { GhostRenderer } from "./GhostRenderer"
 import type { GhostData } from "./DataTypes"
 import type { AIDebugFrame } from "./aiTypes"
-import { useMultiplayer } from "./useMultiplayer"
+import type { RemotePlayer } from "./useMultiplayer"
 import { RemoteCarRenderer } from "./RemoteCarRenderer"
+import { BotCar, BOT_ENABLED } from "./BotCar"
 
 interface SceneProps {
   onDebugSpeed: (speed: number) => void
@@ -42,12 +43,25 @@ interface SceneProps {
   ghostData?: GhostData
   onDebugAIFrame?: (frame: AIDebugFrame) => void
   showCheckpoints?: boolean
-  onPlayerCount?: (count: number) => void
   onCountdown?: (value: number | null) => void
+  // Multiplayer — managed in App.tsx, threaded down as props
+  remotePlayers: RemotePlayer[]
+  broadcast: (pos: [number, number, number], quat: [number, number, number, number], lap: number) => void
+  broadcastFinished: (finished: boolean) => void
+  registerBotPlayer: () => void
+  broadcastBot: (pos: [number, number, number], quat: [number, number, number, number], lap: number) => void
+  gamePhase: string   // "lobby" | "playing"
+  allReady: boolean   // every player has loaded assets
+  onGameReady?: () => void  // called when this client's assets are loaded
 }
 
 // Scene.tsx
-export function Scene({ onDebugSpeed, onDebugTransform, onLapTime, onLapChange, onRaceFinished, ghostData, onDebugAIFrame, showCheckpoints = false, onPlayerCount, onCountdown }: SceneProps) {
+export function Scene({
+  onDebugSpeed, onDebugTransform, onLapTime, onLapChange, onRaceFinished,
+  ghostData, onDebugAIFrame, showCheckpoints = false, onCountdown,
+  remotePlayers, broadcast, broadcastFinished, registerBotPlayer, broadcastBot,
+  gamePhase, allReady, onGameReady,
+}: SceneProps) {
   const [thirdPerson, setThirdPerson] = useState<boolean>(true)
   const [isBot, setIsBot] = useState<boolean>(false)
   const [quality, setQuality] = useState<QualityPreset>('low')
@@ -67,18 +81,27 @@ export function Scene({ onDebugSpeed, onDebugTransform, onLapTime, onLapChange, 
   const nextCheckpointRef = useRef<number>(0)
   const [raceFinished, setRaceFinished] = useState(false)
 
-  const { remotePlayers, broadcast, broadcastFinished } = useMultiplayer()
+  // Bot-specific state — tracked independently of the human player
+  const [botCurrentCheckpoint, setBotCurrentCheckpoint] = useState(0)
+  const botNextCheckpointRef = useRef(0)
+  const botLapKeyRef = useRef(0)
+  const [botLapKey, setBotLapKey] = useState(0)
+  const [finishLinePos, setFinishLinePos] = useState<[number, number, number] | null>(null)
+  const [finishLineSize, setFinishLineSize] = useState<[number, number, number] | null>(null)
 
   useEffect(() => {
-    onPlayerCount?.(remotePlayers.length)
-  }, [remotePlayers.length, onPlayerCount])
+    if (BOT_ENABLED) registerBotPlayer()
+  }, [registerBotPlayer])
 
-  // Refs so handleTrigger (useCallback []) can always read the latest values
+  // Stable ref so handleTrigger (useCallback []) always sees latest remotePlayers
   const remotePlayersRef = useRef(remotePlayers)
   useEffect(() => { remotePlayersRef.current = remotePlayers }, [remotePlayers])
 
+  // Stable ref so handleTrigger (useCallback []) always sees latest broadcastFinished
   const broadcastFinishedRef = useRef(broadcastFinished)
+  useEffect(() => { broadcastFinishedRef.current = broadcastFinished }, [broadcastFinished])
 
+  // ─── Countdown ─────────────────────────────────────────────────────────────
   const [countdown, setCountdown] = useState<number | null>(null)
   const countdownTimersRef = useRef<ReturnType<typeof setTimeout>[]>([])
 
@@ -96,22 +119,33 @@ export function Scene({ onDebugSpeed, onDebugTransform, onLapTime, onLapChange, 
     onCountdown?.(countdown)
   }, [countdown, onCountdown])
 
-  // Start countdown once track loads; carStartPos only goes from null → value once
+  // Countdown begins only when host has started (gamePhase="playing") AND
+  // this client's track is loaded (carStartPos set) AND all players are ready
   useEffect(() => {
-    if (!carStartPos) return
+    if (gamePhase !== "playing" || !carStartPos || !allReady) return
     startCountdown()
-  }, [carStartPos, startCountdown])
+  }, [gamePhase, carStartPos, allReady, startCountdown])
 
-  // Cleanup on unmount
+  // Notify App.tsx that this client's assets are loaded
+  useEffect(() => {
+    if (gamePhase !== "playing" || !carStartPos) return
+    onGameReady?.()
+  }, [gamePhase, carStartPos, onGameReady])
+
+  // Cleanup countdown timers on unmount
   useEffect(() => {
     return () => { countdownTimersRef.current.forEach(clearTimeout) }
   }, [])
 
-  // Stable refs for callbacks so handleTrigger (useCallback []) can always call latest version
+  // ─── Stable refs for props used in useCallback([]) closures ──────────────
   const onLapChangeRef = useRef(onLapChange)
   const onRaceFinishedRef = useRef(onRaceFinished)
   useEffect(() => { onLapChangeRef.current = onLapChange }, [onLapChange])
   useEffect(() => { onRaceFinishedRef.current = onRaceFinished }, [onRaceFinished])
+
+  // Ref so keydown handler (mounted once with []) can read latest gamePhase
+  const gamePhaseRef = useRef(gamePhase)
+  useEffect(() => { gamePhaseRef.current = gamePhase }, [gamePhase])
 
   useEffect(() => {
     function keydownHandler(e: KeyboardEvent) {
@@ -129,7 +163,8 @@ export function Scene({ onDebugSpeed, onDebugTransform, onLapTime, onLapChange, 
         setRaceFinished(false)
         broadcastFinishedRef.current(false)
         onLapChangeRef.current?.(0, totalLapsRef.current)
-        startCountdown()
+        // Only restart countdown if the race has already started
+        if (gamePhaseRef.current === "playing") startCountdown()
         console.log("Recording reset via 'r'")
       }
     }
@@ -172,16 +207,47 @@ export function Scene({ onDebugSpeed, onDebugTransform, onLapTime, onLapChange, 
     console.log("Lap started/restarted, lapKey:", lapKeyRef.current)
   }, [])
 
+  const handleBotTrigger = useCallback(() => {
+    const cps = checkpointsRef.current
+    if (botLapKeyRef.current > 0) {
+      if (botNextCheckpointRef.current < cps.length) return
+      botNextCheckpointRef.current = 1
+    } else {
+      botNextCheckpointRef.current = 1
+    }
+    botLapKeyRef.current += 1
+    setBotLapKey(botLapKeyRef.current)
+    console.log("[Bot] Lap", botLapKeyRef.current)
+  }, [])
+
   const handleSaveReady = useCallback((saveFn: (lapMs: number) => void) => {
     saveRef.current = saveFn
   }, [])
 
-  const handleTrackLoad = useCallback((pos: [number, number, number], cps: CheckpointDef[], laps: number) => {
+  const handleTrackLoad = useCallback((
+    pos: [number, number, number],
+    cps: CheckpointDef[],
+    laps: number,
+    trigPos: [number, number, number],
+    trigSize: [number, number, number],
+  ) => {
     checkpointsRef.current = cps
     totalLapsRef.current = laps
     setCarStartPos(pos)
     setCheckpoints(cps)
+    if (BOT_ENABLED) {
+      setFinishLinePos(trigPos)
+      setFinishLineSize(trigSize)
+    }
   }, [])
+
+  // Car is disabled when: race finished, OR game not started yet, OR
+  // assets still loading, OR during the pre-race countdown
+  const carDisabled =
+    raceFinished ||
+    gamePhase !== "playing" ||
+    !allReady ||
+    (countdown !== null && countdown > 0)
 
   return (
     <QualityContext.Provider value={quality}>
@@ -237,7 +303,7 @@ export function Scene({ onDebugSpeed, onDebugTransform, onLapTime, onLapChange, 
             currentCheckpoint={currentCheckpoint}
             isBot={isBot}
             checkpoints={checkpoints}
-            disabled={raceFinished || (countdown !== null && countdown > 0)}
+            disabled={carDisabled}
             onCheckpointTrigger={(idx) => {
               if (idx !== nextCheckpointRef.current) return
               nextCheckpointRef.current = idx + 1  // advances to N when idx = N-1 (signals all done)
@@ -247,10 +313,31 @@ export function Scene({ onDebugSpeed, onDebugTransform, onLapTime, onLapChange, 
             onNetworkFrame={broadcast}
           />
         )}
-        {ghostData && <GhostRenderer ghostData={ghostData} startSignal={ghostStartSignal} />}
-        {remotePlayers.map(remote => (
-          <RemoteCarRenderer key={remote.id} remote={remote} />
-        ))}
+        {ghostData && <GhostRenderer ghostData={ghostData} startSignal={ghostStartSignal} lapKey={lapKey} />}
+        {remotePlayers
+          .filter(r => r.id !== "bot-player")
+          .map(remote => (
+            <RemoteCarRenderer key={remote.id} remote={remote} />
+          ))}
+        {BOT_ENABLED && carStartPos && checkpoints.length > 0 && (
+          <BotCar
+            startPosition={[carStartPos[0] + 3, carStartPos[1], carStartPos[2]]}
+            resetSignal={resetKey}
+            lapKey={botLapKey}
+            currentCheckpoint={botCurrentCheckpoint}
+            checkpoints={checkpoints}
+            disabled={carDisabled}
+            onCheckpointTrigger={(idx) => {
+              if (idx !== botNextCheckpointRef.current) return
+              botNextCheckpointRef.current = idx + 1
+              setBotCurrentCheckpoint((idx + 1) % checkpoints.length)
+            }}
+            onFinishLineTrigger={handleBotTrigger}
+            finishLinePos={finishLinePos ?? undefined}
+            finishLineSize={finishLineSize ?? undefined}
+            onNetworkFrame={broadcastBot}
+          />
+        )}
       </Suspense>
     </QualityContext.Provider>
   )
